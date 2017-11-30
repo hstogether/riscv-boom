@@ -249,7 +249,56 @@ object FpuRRdDecode extends RRdDecodeConstants
          BitPat(uopFNMADD_D)->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
          BitPat(uopFNMSUB_D)->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N))
 }
- 
+
+// Jecy 20171130
+// Add HFPU decode
+object HfpuRRdDecode extends RRdDecodeConstants
+{
+   val table: Array[(BitPat, List[BitPat])] =
+              Array[(BitPat, List[BitPat])](
+                               // br type
+                               // |      use alu pipe              op1 sel   op2 sel
+                               // |      |  use muldiv pipe        |         |         immsel       csr_cmd
+                               // |      |  |  use mem pipe        |         |         |     rf wen |
+                               // |      |  |  |  alu fcn  wd/word?|         |         |     |      |
+                               // |      |  |  |  |        |       |         |         |     |      |
+         BitPat(uopFCLASS_H)->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFMV_X_H)->List(BR_N , Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFSGNJ_H)->List(BR_N , Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFCVT_S_H) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_H_S) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_H_D) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_D_H) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+// TODO comment out I2F instructions.
+         BitPat(uopFCVT_H_W) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_H_WU)->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_H_L) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_H_LU)->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFCVT_W_H) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_WU_H)->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_L_H) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_LU_H)->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFEQ_H)   ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFLT_H)   ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFLE_H)   ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFMIN_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFMAX_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFADD_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFSUB_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFMUL_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFMADD_H) ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFMSUB_H) ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFNMADD_H)->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFNMSUB_H)->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N))
+}
 
 object IfmvRRdDecode extends RRdDecodeConstants
 {
