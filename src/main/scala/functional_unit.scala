@@ -40,6 +40,7 @@ object FUConstants
    val FU_FDV = UInt(128, FUC_SZ)
    val FU_I2F = UInt(256, FUC_SZ)
    val FU_F2I = UInt(512, FUC_SZ)
+   val FU_HFPU= UInt(1024,FUC_SZ) // Jecy
 }
 import FUConstants._
 
@@ -52,7 +53,8 @@ class SupportedFuncUnits(
    val fpu: Boolean  = false,
    val csr: Boolean  = false,
    val fdiv: Boolean = false,
-   val ifpu: Boolean = false)
+   val ifpu: Boolean = false,
+   val hfpu: Boolean = false) // Jecy
 {
 }
 
@@ -72,6 +74,7 @@ class FunctionalUnitIo(num_stages: Int
    val br_unit = new BranchUnitResp().asOutput
 
    // only used by the fpu unit
+   // Now it's also used by hfpu unit --Jecy
    val fcsr_rm = UInt(INPUT, tile.FPConstants.RM_SZ)
 
    // only used by branch unit
@@ -617,7 +620,7 @@ class MemAddrCalcUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(nu
    val unrec_out = Mux(io.req.bits.uop.fp_single, Cat(Fill(32, unrec_s(31)), unrec_s), unrec_d)
 
    var store_data:UInt = null
-   if (!usingFPU) store_data = io.req.bits.rs2_data
+   if (!usingFPU && !usingHFPU) store_data = io.req.bits.rs2_data  // Jecy add && !usingHFPU
    else store_data = Mux(io.req.bits.uop.fp_val, unrec_out, io.req.bits.rs2_data)
 
    io.resp.bits.addr := effective_address
@@ -669,6 +672,25 @@ class FPUUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    io.resp.bits.fflags.bits.flags := fpu.io.resp.bits.fflags.bits.flags // kill me now
 }
 
+// Jecy 20171130
+// currently, bypassing is unsupported!
+// All FP instructions are padded out to the max latency unit for easy
+// write-port scheduling.
+class HFPUUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
+   num_stages = p(tile.TileKey).core.fpu.get.dfmaLatency, // This latency need to fix -- Jecy
+   num_bypass_stages = 0,
+   earliest_bypass_stage = 0,
+   data_width = 65)(p)
+{
+   val hfpu = Module(new HFPU())
+   hfpu.io.req <> io.req
+   hfpu.io.req.bits.fcsr_rm := io.fcsr_rm
+
+   io.resp.bits.data              := hfpu.io.resp.bits.data
+   io.resp.bits.fflags.valid      := hfpu.io.resp.bits.fflags.valid
+   io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
+   io.resp.bits.fflags.bits.flags := hfpu.io.resp.bits.fflags.bits.flags // kill me now
+}
 
 class IntToFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    num_stages = p(BoomKey).intToFpLatency,
@@ -704,7 +726,40 @@ class IntToFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    io.resp.bits.fflags.bits.flags := ifpu.io.out.bits.exc
 }
 
+// Jecy 20171130
+class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
+   num_stages = p(BoomKey).intToFpLatency,
+   num_bypass_stages = 0,
+   earliest_bypass_stage = 0,
+   data_width = 65)(p)
+{
+   val hfp_decoder = Module(new UOPCodeHFPUDecoder) // TODO use a simpler decoder
+   val io_req = io.req.bits
+   hfp_decoder.io.uopc := io_req.uop.uopc
+   val fp_ctrl = hfp_decoder.io.sigs
+   val fp_rm = Mux(ImmGenRm(io_req.uop.imm_packed) === Bits(7), io.fcsr_rm, ImmGenRm(io_req.uop.imm_packed))
+   val req = Wire(new tile.FPInput)
+   req := fp_ctrl
+   req.rm := fp_rm
+   req.in1 := io_req.rs1_data
+   req.in2 := io_req.rs2_data
+   req.typ := ImmGenTyp(io_req.uop.imm_packed)
 
+   assert (!(io.req.valid && fp_ctrl.fromint && req.in1(64).toBool),
+      "[func] IntToFP integer input has 65th high-order bit set!")
+
+   assert (!(io.req.valid && !fp_ctrl.fromint),
+      "[func] Only support fromInt micro-ops.")
+
+   val ifpu = Module(new tile.IntToFP(intToFpLatency))  // The IntToFP Unit maby need to fixed. -- Jecy
+   ifpu.io.in.valid := io.req.valid
+   ifpu.io.in.bits := req
+
+   io.resp.bits.data              := ifpu.io.out.bits.data
+   io.resp.bits.fflags.valid      := ifpu.io.out.valid
+   io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
+   io.resp.bits.fflags.bits.flags := ifpu.io.out.bits.exc
+}
 
 // Iterative/unpipelined, can only hold a single MicroOp at a time TODO allow up to N micro-ops simultaneously.
 // assumes at least one register between request and response
