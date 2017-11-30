@@ -281,6 +281,8 @@ trait ScalarOpConstants
    // FP16 uops
    // Jecy 20171129
    // But there are no FLH FSH FSGNJN.H FSGNJX.H instruction
+   // Because FLH/FSH -> uopLTA/uopSD
+   //         FSGNJN.H/FSGNJX.H -> uopFSGNJ.H
    val uopFMV_H_X   = UInt(68, UOPC_SZ)
    val uopFMV_X_H   = UInt(70, UOPC_SZ)
 
