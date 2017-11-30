@@ -118,7 +118,7 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
    val fpu_latency = dfmaLatency
    val io_req = io.req.bits
 
-   val fp_decoder = Module(new UOPCodeFPUDecoder)
+   val fp_decoder = Module(new UOPCodeHFPUDecoder)
    fp_decoder.io.uopc:= io_req.uop.uopc
    val fp_ctrl = fp_decoder.io.sigs
    val fp_rm = Mux(ImmGenRm(io_req.uop.imm_packed) === Bits(7), io_req.fcsr_rm, ImmGenRm(io_req.uop.imm_packed))
