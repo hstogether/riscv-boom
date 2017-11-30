@@ -18,6 +18,7 @@ case class BoomCoreParams(
          IssueParams(issueWidth=1, numEntries=16, iqType=IQT_MEM.litValue),
          IssueParams(issueWidth=2, numEntries=16, iqType=IQT_INT.litValue),
          IssueParams(issueWidth=1, numEntries=16, iqType=IQT_FP.litValue)),
+         IssueParams(issueWidth=1, numEntries=16, iqType=IQT_HFP.litValue)), // Jecy Add HFP issue Port
    numLsuEntries: Int = 8,
    numIntPhysRegisters: Int = 96,
    numFpPhysRegisters: Int = 64,
@@ -45,7 +46,8 @@ case class BoomCoreParams(
    imulLatency: Int = 3,
    fetchLatency: Int = 3,
    renameLatency: Int = 2,
-   regreadLatency: Int = 1
+   regreadLatency: Int = 1,
+   enableHFPU: Boolean = true // Jecy add HFPU
 )
 
 trait HasBoomCoreParameters extends tile.HasCoreParameters
@@ -88,12 +90,16 @@ trait HasBoomCoreParameters extends tile.HasCoreParameters
 
    val mulDivParams = rocketParams.mulDiv.getOrElse(MulDivParams())
 
+   val usingHFPU = boomParams.enableHFPU // Jecy add usingHFP singnel
+
    //************************************
    // Pipelining
 
    val imulLatency = boomParams.imulLatency
    val dfmaLatency = if (rocketParams.fpu.isDefined) rocketParams.fpu.get.dfmaLatency else 3
    val sfmaLatency = if (rocketParams.fpu.isDefined) rocketParams.fpu.get.sfmaLatency else 3
+   val hfmaLatency = 3 // Jecy
+
    // All FPU ops padded out to same delay for writeport scheduling.
    require (sfmaLatency == dfmaLatency)
 
@@ -117,6 +123,7 @@ trait HasBoomCoreParameters extends tile.HasCoreParameters
    require (issueParams.count(_.iqType == IQT_FP.litValue) == 1)
    require (issueParams.count(_.iqType == IQT_MEM.litValue) == 1)
    require (issueParams.count(_.iqType == IQT_INT.litValue) == 1)
+   require (issueParams.count(_.iqType == IQT_HFP.litValue) == 1) // Jecy
 
    //************************************
    // Load/Store Unit
