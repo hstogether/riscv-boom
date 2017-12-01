@@ -284,46 +284,46 @@ trait ScalarOpConstants
    // But there are no FLH FSH FSGNJN.H FSGNJX.H instruction
    // Because FLH/FSH -> uopLTA/uopSD
    //         FSGNJN.H/FSGNJX.H -> uopFSGNJ.H
-   val uopFMV_H_X   = UInt(68, UOPC_SZ)
-   val uopFMV_X_H   = UInt(70, UOPC_SZ)
+   val uopFMV_H_X   = UInt(122, UOPC_SZ)
+   val uopFMV_X_H   = UInt(123, UOPC_SZ)
 
-   val uopFSGNJ_H   = UInt(72, UOPC_SZ)
+   val uopFSGNJ_H   = UInt(124, UOPC_SZ)
 
-   val uopFCVT_S_H  = UInt(74, UOPC_SZ)
-   val uopFCVT_H_S  = UInt(75, UOPC_SZ)
-   val uopFCVT_H_D  = UInt(,UOP_SZ)
-   val uopFCVT_D_H  = UInt(,UOP_SZ)
+   val uopFCVT_S_H  = UInt(125, UOPC_SZ)
+   val uopFCVT_H_S  = UInt(126, UOPC_SZ)
+   val uopFCVT_H_D  = UInt(127, UOP_SZ)
+   val uopFCVT_D_H  = UInt(128, UOP_SZ)
 
-   val uopFCVT_H_W  = UInt(76, UOPC_SZ)
-   val uopFCVT_H_WU = UInt(77, UOPC_SZ)
-   val uopFCVT_H_L  = UInt(78, UOPC_SZ)
-   val uopFCVT_H_LU = UInt(79, UOPC_SZ)
+   val uopFCVT_H_W  = UInt(129, UOPC_SZ)
+   val uopFCVT_H_WU = UInt(130, UOPC_SZ)
+   val uopFCVT_H_L  = UInt(131, UOPC_SZ)
+   val uopFCVT_H_LU = UInt(132, UOPC_SZ)
 
-   val uopFCVT_W_H  = UInt(84, UOPC_SZ)
-   val uopFCVT_WU_H = UInt(85, UOPC_SZ)
-   val uopFCVT_L_H  = UInt(86, UOPC_SZ)
-   val uopFCVT_LU_H = UInt(87, UOPC_SZ)
+   val uopFCVT_W_H  = UInt(133, UOPC_SZ)
+   val uopFCVT_WU_H = UInt(134, UOPC_SZ)
+   val uopFCVT_L_H  = UInt(135, UOPC_SZ)
+   val uopFCVT_LU_H = UInt(136, UOPC_SZ)
 
-   val uopFEQ_H     = UInt(92, UOPC_SZ)
-   val uopFLT_H     = UInt(93, UOPC_SZ)
-   val uopFLE_H     = UInt(94, UOPC_SZ)
+   val uopFEQ_H     = UInt(137, UOPC_SZ)
+   val uopFLT_H     = UInt(138, UOPC_SZ)
+   val uopFLE_H     = UInt(139, UOPC_SZ)
 
-   val uopFCLASS_H  = UInt(98, UOPC_SZ)
+   val uopFCLASS_H  = UInt(140, UOPC_SZ)
 
-   val uopFMIN_H    = UInt(100,UOPC_SZ)
-   val uopFMAX_H    = UInt(101,UOPC_SZ)
+   val uopFMIN_H    = UInt(141, UOPC_SZ)
+   val uopFMAX_H    = UInt(142, UOPC_SZ)
 
-   val uopFADD_H    = UInt(104,UOPC_SZ)
-   val uopFSUB_H    = UInt(105,UOPC_SZ)
-   val uopFMUL_H    = UInt(106,UOPC_SZ)
+   val uopFADD_H    = UInt(143, UOPC_SZ)
+   val uopFSUB_H    = UInt(144, UOPC_SZ)
+   val uopFMUL_H    = UInt(145, UOPC_SZ)
 
-   val uopFMADD_H   = UInt(110,UOPC_SZ)
-   val uopFMSUB_H   = UInt(111,UOPC_SZ)
-   val uopFNMADD_H  = UInt(112,UOPC_SZ)
-   val uopFNMSUB_H  = UInt(113,UOPC_SZ)
+   val uopFMADD_H   = UInt(146, UOPC_SZ)
+   val uopFMSUB_H   = UInt(147, UOPC_SZ)
+   val uopFNMADD_H  = UInt(148, UOPC_SZ)
+   val uopFNMSUB_H  = UInt(149, UOPC_SZ)
 
-   val uopFDIV_H    = UInt(118,UOPC_SZ)
-   val uopFSQRT_H   = UInt(120,UOPC_SZ)
+   val uopFDIV_H    = UInt(150, UOPC_SZ)
+   val uopFSQRT_H   = UInt(151, UOPC_SZ)
 
 
    // Memory Mask Type Signal
