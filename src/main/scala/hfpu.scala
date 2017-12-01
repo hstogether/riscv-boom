@@ -160,7 +160,7 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
                     hfma.io.out.valid
    val hfpu_out   = Mux(hfma.io.out.valid, hfma.io.out.bits,
                    Mux(fpiu_out.valid,    fpiu_result,
-                                          fpmu.io.out.bits)))
+                                          fpmu.io.out.bits))
 
    io.resp.bits.data              := hfpu_out.data
    io.resp.bits.fflags.valid      := io.resp.valid
