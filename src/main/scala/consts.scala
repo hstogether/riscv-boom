@@ -291,8 +291,8 @@ trait ScalarOpConstants
 
    val uopFCVT_S_H  = UInt(125, UOPC_SZ)
    val uopFCVT_H_S  = UInt(126, UOPC_SZ)
-   val uopFCVT_H_D  = UInt(127, UOP_SZ)
-   val uopFCVT_D_H  = UInt(128, UOP_SZ)
+   val uopFCVT_H_D  = UInt(127, UOPC_SZ)
+   val uopFCVT_D_H  = UInt(128, UOPC_SZ)
 
    val uopFCVT_H_W  = UInt(129, UOPC_SZ)
    val uopFCVT_H_WU = UInt(130, UOPC_SZ)
