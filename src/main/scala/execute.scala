@@ -123,6 +123,7 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
    }
 }
 
+// So complex module, why ??? -- Jecy
 class ALUExeUnit(
    is_branch_unit  : Boolean = false,
    shares_csr_wport: Boolean = false,
@@ -699,7 +700,7 @@ class MemExeUnit(implicit p: Parameters) extends ExecutionUnit(num_rf_read_ports
    io.resp(0).bits.data := memresp_data
 }
 
-
+// So complex module, why ??? -- Jecy
 class ALUMemExeUnit(
    is_branch_unit    : Boolean = false,
    shares_csr_wport: Boolean = false,
