@@ -9,7 +9,7 @@
 package boom
 {
    // Note: fdiv, fsqrt unsupported.
-   // Note: (this FPU currently only supports fixed latency ops)
+   // Note: (this HFPU currently only supports fixed latency ops)
 
 import Chisel._
 import config.Parameters
@@ -115,42 +115,42 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
    })
 
    // all FP units are padded out to the same latency for easy scheduling of the write port
-   val fpu_latency = dfmaLatency
+   val hfpu_latency = hfmaLatency
    val io_req = io.req.bits
 
-   val fp_decoder = Module(new UOPCodeHFPUDecoder)
-   fp_decoder.io.uopc:= io_req.uop.uopc
-   val fp_ctrl = fp_decoder.io.sigs
-   val fp_rm = Mux(ImmGenRm(io_req.uop.imm_packed) === Bits(7), io_req.fcsr_rm, ImmGenRm(io_req.uop.imm_packed))
+   val hfp_decoder = Module(new UOPCodeHFPUDecoder)
+   hfp_decoder.io.uopc:= io_req.uop.uopc
+   val hfp_ctrl = hfp_decoder.io.sigs
+   val hfp_rm = Mux(ImmGenRm(io_req.uop.imm_packed) === Bits(7), io_req.fcsr_rm, ImmGenRm(io_req.uop.imm_packed))
 
    val req = Wire(new tile.FPInput)
-   req := fp_ctrl
-   req.rm := fp_rm
+   req := hfp_ctrl
+   req.rm := hfp_rm
    req.in1 := io_req.rs1_data
    req.in2 := io_req.rs2_data
    req.in3 := io_req.rs3_data
-   when (fp_ctrl.swap23) { req.in3 := io_req.rs2_data }
+   when (hfp_ctrl.swap23) { req.in3 := io_req.rs2_data }
 
    req.typ := ImmGenTyp(io_req.uop.imm_packed)
 
 
-   val hfma = Module(new tile.FPUFMAPipe(latency = fpu_latency, expWidth = 5, sigWidth = 11))
-   hfma.io.in.valid := io.req.valid && fp_ctrl.fma && !fp_ctrl.single
+   val hfma = Module(new tile.FPUFMAPipe(latency = hfpu_latency, expWidth = 5, sigWidth = 11))
+   hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && !hfp_ctrl.single
    hfma.io.in.bits := req
 
 
    val fpiu = Module(new tile.FPToInt)
-   fpiu.io.in.valid := io.req.valid && (fp_ctrl.toint || fp_ctrl.cmd === FCMD_MINMAX)
+   fpiu.io.in.valid := io.req.valid && (hfp_ctrl.toint || hfp_ctrl.cmd === FCMD_MINMAX)
    fpiu.io.in.bits := req
-   val fpiu_out = Pipe(Reg(next=fpiu.io.in.valid && !fp_ctrl.fastpipe),
-                       fpiu.io.out.bits, fpu_latency-1)
+   val fpiu_out = Pipe(Reg(next=fpiu.io.in.valid && !hfp_ctrl.fastpipe),
+                       fpiu.io.out.bits, hfpu_latency-1)
    val fpiu_result  = Wire(new tile.FPResult)
    fpiu_result.data := fpiu_out.bits.toint
    fpiu_result.exc  := fpiu_out.bits.exc
 
 
-   val fpmu = Module(new tile.FPToFP(fpu_latency)) // latency 2 for rocket
-   fpmu.io.in.valid := io.req.valid && fp_ctrl.fastpipe
+   val fpmu = Module(new tile.FPToFP(hfpu_latency)) // latency 2 for rocket
+   fpmu.io.in.valid := io.req.valid && hfp_ctrl.fastpipe
    fpmu.io.in.bits := req
    fpmu.io.lt := fpiu.io.out.bits.lt
 
@@ -158,13 +158,13 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
    io.resp.valid := fpiu_out.valid ||
                     fpmu.io.out.valid ||
                     hfma.io.out.valid
-   val fpu_out   = Mux(hfma.io.out.valid, hfma.io.out.bits,
+   val hfpu_out   = Mux(hfma.io.out.valid, hfma.io.out.bits,
                    Mux(fpiu_out.valid,    fpiu_result,
                                           fpmu.io.out.bits)))
 
-   io.resp.bits.data              := fpu_out.data
+   io.resp.bits.data              := hfpu_out.data
    io.resp.bits.fflags.valid      := io.resp.valid
-   io.resp.bits.fflags.bits.flags := fpu_out.exc
+   io.resp.bits.fflags.bits.flags := hfpu_out.exc
 
 // TODO why is this assertion failing?
 //   assert (PopCount(Vec(ifpu.io.out, fpiu_out, fpmu.io.out, sfma.io.out, dfma.io.out).map(_.valid)) <= UInt(1),
