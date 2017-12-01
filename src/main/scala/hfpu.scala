@@ -67,7 +67,7 @@ class UOPCodeHFPUDecoder extends Module
       BitPat(uopFCVT_WU_H)-> List(FCMD_CVT_IF, X,X,Y,N,N, N,X,N,N,Y,N,N, N,N,Y,Y),
       BitPat(uopFCVT_L_H) -> List(FCMD_CVT_IF, X,X,Y,N,N, N,X,N,N,Y,N,N, N,N,Y,Y),
       BitPat(uopFCVT_LU_H)-> List(FCMD_CVT_IF, X,X,Y,N,N, N,X,N,N,Y,N,N, N,N,Y,Y),
-\
+
       BitPat(uopFEQ_H)    -> List(FCMD_CMP,    X,X,Y,Y,N, N,N,N,N,Y,N,N, N,N,N,Y),
       BitPat(uopFLT_H)    -> List(FCMD_CMP,    X,X,Y,Y,N, N,N,N,N,Y,N,N, N,N,N,Y),
       BitPat(uopFLE_H)    -> List(FCMD_CMP,    X,X,Y,Y,N, N,N,N,N,Y,N,N, N,N,N,Y),
