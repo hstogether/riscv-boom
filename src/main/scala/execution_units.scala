@@ -14,10 +14,11 @@ import config.Parameters
 
 import scala.collection.mutable.ArrayBuffer
 
-class ExecutionUnits(fpu: Boolean = false)(implicit val p: Parameters) extends HasBoomCoreParameters
+// Change the interface. -- Jecy
+class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p: Parameters) extends HasBoomCoreParameters
 {
    val totalIssueWidth = issueParams.map(_.issueWidth).sum
-   if (!fpu) {
+   if (!fpu && !hfpu) { // Jecy
       println("\n   ~*** " + Seq("One","Two","Three","Four")(DECODE_WIDTH-1) + "-wide Machine ***~\n")
       println("    -== " + Seq("Single","Dual","Triple","Quad","Five","Six")(totalIssueWidth-1) + " Issue ==- \n")
    }
@@ -102,7 +103,7 @@ class ExecutionUnits(fpu: Boolean = false)(implicit val p: Parameters) extends H
 
 
 
-   if (!fpu) {
+   if (!fpu && !hfpu) {
       val int_width = issueParams.find(_.iqType == IQT_INT.litValue).get.issueWidth
       exe_units += Module(new MemExeUnit())
       exe_units += Module(new ALUExeUnit(is_branch_unit      = true
@@ -116,8 +117,8 @@ class ExecutionUnits(fpu: Boolean = false)(implicit val p: Parameters) extends H
          val is_last = w == (int_width-2)
          exe_units += Module(new ALUExeUnit(has_ifpu = is_last))
       }
-   } else {
-      require (usingFPU)
+   } else if(fpu && !hfpu){
+      require (usingFPU && !usingHFPU) // Jecy
       val fp_width = issueParams.find(_.iqType == IQT_FP.litValue).get.issueWidth
       require (fp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.
       for (w <- 0 until fp_width) {
@@ -125,6 +126,25 @@ class ExecutionUnits(fpu: Boolean = false)(implicit val p: Parameters) extends H
                                             has_fdiv = usingFDivSqrt && (w==0),
                                             has_fpiu = (w==0)))
       }
+      exe_units += Module(new IntToFPExeUnit())
+   } else { // Jecy
+      require (usingFPU && usingHFPU)
+      val fp_width = issueParams.find(_.iqType == IQT_FP.litValue).get.issueWidth
+      require (fp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.
+      for (w <- 0 until fp_width) {
+         exe_units += Module(new FPUExeUnit(has_fpu = true,
+                                            has_fdiv = usingFDivSqrt && (w==0),
+                                            has_fpiu = (w==0)))
+      }
+
+      val hfp_width = issueParams.find(_.iqType == IQT_HFP.litValue).get.issueWidth
+      require (hfp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.
+      for (w <- 0 until hfp_width) {
+         exe_units += Module(new HFPUExeUnit(has_hfpu = true,
+                                            has_fdiv = usingFDivSqrt && (w==0),
+                                            has_fpiu = (w==0)))
+      }
+
       exe_units += Module(new IntToFPExeUnit())
    }
 
@@ -135,6 +155,12 @@ class ExecutionUnits(fpu: Boolean = false)(implicit val p: Parameters) extends H
    require (exe_units.map(_.has_mul).reduce(_|_) || fpu, "Datapath is missing a multiplier.")
    require (exe_units.map(_.has_div).reduce(_|_) || fpu, "Datapath is missing a divider.")
    require (exe_units.map(_.has_fpu).reduce(_|_) == usingFPU || !fpu, "Datapath is missing a fpu (or has an fpu and shouldnt).")
+
+   // if this is for HFPU units, we don't need a memory unit (or other integer units)..  -- Jecy
+   require (exe_units.map(_.is_mem_unit).reduce(_|_) || hfpu, "Datapath is missing a memory unit.")
+   require (exe_units.map(_.has_mul).reduce(_|_) || hfpu, "Datapath is missing a multiplier.")
+   require (exe_units.map(_.has_div).reduce(_|_) || hfpu, "Datapath is missing a divider.")
+   require (exe_units.map(_.has_hfpu).reduce(_|_) == usingHFPU || !hfpu, "Datapath is missing a hfpu (or has an hfpu and shouldnt).")
 
    val num_rf_read_ports = exe_units.map(_.num_rf_read_ports).reduce[Int](_+_)
    val num_rf_write_ports = exe_units.map(_.num_rf_write_ports).reduce[Int](_+_)
@@ -148,9 +174,10 @@ class ExecutionUnits(fpu: Boolean = false)(implicit val p: Parameters) extends H
 
    // TODO bug, this can return too many fflag ports,e.g., the FPU is shared with the mem unit and thus has two wb ports
    val num_fpu_ports = exe_units.withFilter(_.hasFFlags).map(_.num_rf_write_ports).foldLeft(0)(_+_)
+   val num_hfpu_ports = exe_units.withFilter(_.hasFFlags).map(_.num_rf_write_ports).foldLeft(0)(_+_)  // Jecy
 
    val bypassable_write_port_mask = {
-      if (fpu)
+      if (fpu || hfpu) // Jecy
       {
          // NOTE: hack for the long latency load pipe which is write_port(0) and doesn't support bypassing.
          val mask = Seq(false) ++ exe_units.withFilter(_.uses_iss_unit).map(_.isBypassable)
