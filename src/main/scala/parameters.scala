@@ -17,7 +17,7 @@ case class BoomCoreParams(
    issueParams: Seq[IssueParams] = Seq(
          IssueParams(issueWidth=1, numEntries=16, iqType=IQT_MEM.litValue),
          IssueParams(issueWidth=2, numEntries=16, iqType=IQT_INT.litValue),
-         IssueParams(issueWidth=1, numEntries=16, iqType=IQT_FP.litValue)),
+         IssueParams(issueWidth=1, numEntries=16, iqType=IQT_FP.litValue),
          IssueParams(issueWidth=1, numEntries=16, iqType=IQT_HFP.litValue)), // Jecy Add HFP issue Port
    numLsuEntries: Int = 8,
    numIntPhysRegisters: Int = 96,
