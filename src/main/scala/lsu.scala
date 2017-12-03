@@ -67,6 +67,7 @@ class LoadStoreUnitIO(pl_width: Int)(implicit p: Parameters) extends BoomBundle(
    // Execute Stage
    val exe_resp           = (new ValidIO(new FuncUnitResp(xLen))).flip
    val fp_stdata          = Valid(new MicroOpWithData(fLen)).flip
+   val hfp_stdata         = Valid(new MicroOpWithData(fLen)).flip  // Jecy
 
    // Commit Stage
    val commit_store_mask  = Vec(pl_width, Bool()).asInput
@@ -101,8 +102,10 @@ class LoadStoreUnitIO(pl_width: Int)(implicit p: Parameters) extends BoomBundle(
    // Let the stores clear out the busy bit in the ROB.
    // Two ports, one for integer and the other for FP.
    // Otherwise, we must back-pressure incoming FP store-data micro-ops.
-   val lsu_clr_bsy_valid  = Vec(2, Bool()).asOutput
-   val lsu_clr_bsy_rob_idx= Vec(2, UInt(width=ROB_ADDR_SZ)).asOutput
+   // Jecy
+   // Add one port to HFP, so there are 3 ports.
+   val lsu_clr_bsy_valid  = Vec(3, Bool()).asOutput
+   val lsu_clr_bsy_rob_idx= Vec(3, UInt(width=ROB_ADDR_SZ)).asOutput
    val lsu_fencei_rdy     = Bool(OUTPUT)
 
    val xcpt = new ValidIO(new Exception)
@@ -581,6 +584,22 @@ class LoadStoreUnit(pl_width: Int)(implicit p: Parameters, edge: uncore.tilelink
       io.fp_stdata.bits.uop.stq_idx === io.exe_resp.bits.uop.stq_idx),
       "[lsu] FP and INT data is fighting over the same sdq entry.")
 
+   // Jecy
+   //--------------------------------------------
+   // HFP Data
+   // Store Data Generation MicroOps come in directly from the HFP registerfile,
+   // and not through the exe_resp datapath.
+
+   when (io.hfp_stdata.valid)
+   {
+      val sidx = io.hfp_stdata.bits.uop.stq_idx
+      sdq_val (sidx) := Bool(true)
+      sdq_data(sidx) := io.hfp_stdata.bits.data.asUInt
+   }
+   assert(!(io.hfp_stdata.valid && io.exe_resp.valid && io.exe_resp.bits.uop.ctrl.is_std &&
+      io.hfp_stdata.bits.uop.stq_idx === io.exe_resp.bits.uop.stq_idx),
+      "[lsu] HFP and INT data is fighting over the same sdq entry.")
+
    require (xLen >= fLen) // otherwise the SDQ is missized.
 
    //-------------------------------------------------------------
@@ -611,6 +630,7 @@ class LoadStoreUnit(pl_width: Int)(implicit p: Parameters, edge: uncore.tilelink
    val mem_fired_sta = Reg(next=(will_fire_sta_incoming || will_fire_sta_retry), init=Bool(false))
    val mem_fired_stdi = Reg(next=will_fire_std_incoming, init=Bool(false))
    val mem_fired_stdf = Reg(next=io.fp_stdata.valid, init=Bool(false))
+   val mem_fired_stdhf = Reg(next=io.hfp_stdata.valid, init=Bool(false)) // Jecy
 
    mem_ld_killed := Bool(false)
    when (Reg(next=
@@ -661,14 +681,20 @@ class LoadStoreUnit(pl_width: Int)(implicit p: Parameters, edge: uncore.tilelink
 
 
    val mem_uop_stdf = RegNext(io.fp_stdata.bits.uop)
+   val mem_uop_stdhf = RegNext(io.hfp_stdata.bits.uop) // Jecy
    val stdf_clr_bsy_valid = RegNext(mem_fired_stdf &&
+                           mem_fired_stdhf &&  // Jecy
                            saq_val(mem_uop_stdf.stq_idx) &&
                            !saq_is_virtual(mem_uop_stdf.stq_idx) &&
                            !mem_uop_stdf.is_amo &&
-                           !IsKilledByBranch(io.brinfo, mem_uop_stdf)) &&
+                           !IsKilledByBranch(io.brinfo, mem_uop_stdf) &&
+                           saq_val(mem_uop_stdhf.stq_idx) &&  // Jecy
+                           !saq_is_virtual(mem_uop_stdhf.stq_idx) &&
+                           !mem_uop_stdhf.is_amo &&
+                           !IsKilledByBranch(io.brinfo, mem_uop_stdhf)) &&
                            !io.exception && !RegNext(io.exception)
-   val stdf_clr_bsy_robidx = RegEnable(mem_uop_stdf.rob_idx, mem_fired_stdf)
-   val stdf_clr_bsy_brmask = RegEnable(GetNewBrMask(io.brinfo, mem_uop_stdf), mem_fired_stdf)
+   val stdf_clr_bsy_robidx = RegEnable(mem_uop_stdf.rob_idx, mem_fired_stdf) // TODO: add mem_fired_stdhf -- Jecy
+   val stdf_clr_bsy_brmask = RegEnable(GetNewBrMask(io.brinfo, mem_uop_stdf), mem_fired_stdf) // TODO: add mem_fired_stdhf -- Jecy
 
    io.lsu_clr_bsy_valid(0)   := clr_bsy_valid && !io.exception && !IsKilledByBranch(io.brinfo, clr_bsy_brmask)
    io.lsu_clr_bsy_rob_idx(0) := clr_bsy_robidx
