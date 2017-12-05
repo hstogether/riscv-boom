@@ -428,9 +428,9 @@ class DecodeUnit(implicit p: Parameters) extends BoomModule()(p)
    if (usingFPU) decode_table ++= FDecode.table
    if (usingFPU && usingFDivSqrt) decode_table ++= FDivSqrtDecode.table
    if (usingFPU && usingHFPU) decode_table ++= HFDecode.table // Jecy Add HFDecode table
-                                                              // Need to add usingHFPU single in somewhere (parameters.scala, core.scala or other palace)
+                                                              // Need to add usingHFPU single in  tile/Core.scala
 
-   val cs = Wire(new CtrlSigs()).decode(uop.inst, decode_table)
+   val cs = Wire(new CtrlSigs()).decode(uop.inst, decode_table) // Walk tabls, using Rocket.DecodeLogic -- Jecy
 
    // Exception Handling
    val id_illegal_insn = !cs.legal ||
