@@ -429,14 +429,15 @@ class DecodeUnit(implicit p: Parameters) extends BoomModule()(p)
    var decode_table = XDecode.table
    if (usingFPU) decode_table ++= FDecode.table
    if (usingFPU && usingFDivSqrt) decode_table ++= FDivSqrtDecode.table
-   if (usingFPU && usingHFPU) decode_table ++= HFDecode.table // Jecy Add HFDecode table
-                                                              // Need to add usingHFPU single in  tile/Core.scala
+   if (usingHFPU) decode_table ++= HFDecode.table // Jecy Add HFDecode table
+                                                  // usingHFPU single in  tile/Core.scala
 
    val cs = Wire(new CtrlSigs()).decode(uop.inst, decode_table) // Walk tabls, using Rocket.DecodeLogic -- Jecy
 
    // Exception Handling
    val id_illegal_insn = !cs.legal ||
       cs.fp_val && !io.status.fs.orR ||
+      cs.hfp_val && !io.status.fs.orR || // I don't know fs single(in rocket/CSR.scala) -- Jecy
       cs.rocc && !io.status.xs.orR
 
    def checkExceptions(x: Seq[(Bool, UInt)]) =
@@ -474,6 +475,7 @@ class DecodeUnit(implicit p: Parameters) extends BoomModule()(p)
 
    uop.fp_val     := cs.fp_val
    uop.fp_single  := cs.fp_single // TODO use this signal instead of the FPU decode's table signal?
+   uop.hfp_val    := cs.hfp_val   // Jecy
 
    uop.mem_cmd    := cs.mem_cmd
    uop.mem_typ    := cs.mem_typ
