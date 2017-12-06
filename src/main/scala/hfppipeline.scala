@@ -22,10 +22,10 @@ import boom.FUConstants._
 
 class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 {
-   val fpIssueParams = issueParams.find(_.iqType == IQT_FP.litValue).get
+   val hfpIssueParams = issueParams.find(_.iqType == IQT_HFP.litValue).get
    val num_ll_ports = 1 // hard-wired; used by mem port and i2f port.
-   val num_wakeup_ports = fpIssueParams.issueWidth + num_ll_ports
-   val fp_preg_sz = log2Up(numFpPhysRegs)
+   val num_wakeup_ports = hfpIssueParams.issueWidth + num_ll_ports
+   val hfp_preg_sz = log2Up(numHfpPhysRegs)
 
    val io = new Bundle
    {
@@ -38,12 +38,12 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       val dis_readys       = Vec(DISPATCH_WIDTH, Bool()).asOutput
 
       // +1 for recoding.
-      val ll_wport         = Valid(new ExeUnitResp(fLen+1)).flip // from memory unit
-      val fromint          = Valid(new FuncUnitReq(fLen+1)).flip // from integer RF
-      val tosdq            = Valid(new MicroOpWithData(fLen))    // to Load/Store Unit
+      val ll_wport         = Valid(new ExeUnitResp(hfLen+1)).flip // from memory unit
+      val fromint          = Valid(new FuncUnitReq(hfLen+1)).flip // from integer RF
+      val tosdq            = Valid(new MicroOpWithData(hfLen))    // to Load/Store Unit
       val toint            = Decoupled(new ExeUnitResp(xLen))    // to integer RF
 
-      val wakeups          = Vec(num_wakeup_ports, Valid(new ExeUnitResp(fLen+1)))
+      val wakeups          = Vec(num_wakeup_ports, Valid(new ExeUnitResp(hfLen+1)))
       val wb_valids        = Vec(num_wakeup_ports, Bool()).asInput
       val wb_pdsts         = Vec(num_wakeup_ports, UInt(width=fp_preg_sz)).asInput
 
@@ -58,21 +58,21 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    val issue_unit       = Module(new IssueUnitCollasping(
                            issueParams.find(_.iqType == IQT_HFP.litValue).get,
                            num_wakeup_ports))
-   val fregfile         = Module(new RegisterFileBehavorial(numFpPhysRegs,
+   val hfregfile         = Module(new RegisterFileBehavorial(numHfpPhysRegs,
                                  exe_units.withFilter(_.uses_iss_unit).map(e => e.num_rf_read_ports).sum,
                                  // TODO get rid of -1, as that's a write-port going to IRF
                                  exe_units.withFilter(_.uses_iss_unit).map(e => e.num_rf_write_ports).sum - 1 +
                                     num_ll_ports,
-                                 fLen+1,
+                                 hfLen+1,
                                  exe_units.bypassable_write_port_mask
                                  ))
-   val fregister_read   = Module(new RegisterRead(
+   val hfregister_read   = Module(new RegisterRead(
                            issue_unit.issue_width,
                            exe_units.withFilter(_.uses_iss_unit).map(_.supportedFuncUnits),
                            exe_units.withFilter(_.uses_iss_unit).map(_.num_rf_read_ports).sum,
                            exe_units.withFilter(_.uses_iss_unit).map(_.num_rf_read_ports),
                            exe_units.num_total_bypass_ports,
-                           fLen+1))
+                           hfLen+1))
 
    require (exe_units.withFilter(_.uses_iss_unit).map(x=>x).length == issue_unit.issue_width)
 
@@ -84,7 +84,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       e.num_rf_write_ports).sum -1 + num_ll_ports == num_wakeup_ports)
 
    override def toString: String =
-      fregfile.toString +
+      hfregfile.toString +
       "\n   Num Wakeup Ports      : " + num_wakeup_ports +
       "\n   Num Bypass Ports      : " + exe_units.num_total_bypass_ports + "\n"
 
@@ -111,8 +111,8 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       issue_unit.io.dis_valids(w) := io.dis_valids(w) && io.dis_uops(w).iqtype === UInt(issue_unit.iqType)
       issue_unit.io.dis_uops(w) := io.dis_uops(w)
 
-      // Or... add STDataGen micro-op for FP stores.
-      when (io.dis_uops(w).uopc === uopSTA && io.dis_uops(w).lrs2_rtype === RT_FLT) {
+      // Or... add STDataGen micro-op for HFP stores.
+      when (io.dis_uops(w).uopc === uopSTA && io.dis_uops(w).lrs2_rtype === RT_FHT) {
          issue_unit.io.dis_valids(w) := io.dis_valids(w)
          issue_unit.io.dis_uops(w).uopc := uopSTD
          issue_unit.io.dis_uops(w).fu_code := FUConstants.FU_HFPU
@@ -133,6 +133,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       iss_uops(i) := issue_unit.io.iss_uops(i)
 
       var fu_types = exe_units(i).io.fu_types
+      // 暂时不支持HFDIV，故此次未做修改
       if (exe_units(i).supportedFuncUnits.fdiv && regreadLatency > 0)
       {
          val fdiv_issued = iss_valids(i) && iss_uops(i).fu_code_is(FU_FDV)
@@ -155,13 +156,13 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    //-------------------------------------------------------------
 
    // Register Read <- Issue (rrd <- iss)
-   fregister_read.io.rf_read_ports <> fregfile.io.read_ports
+   hfregister_read.io.rf_read_ports <> hfregfile.io.read_ports
 
-   fregister_read.io.iss_valids <> iss_valids
-   fregister_read.io.iss_uops := iss_uops
+   hfregister_read.io.iss_valids <> iss_valids
+   hfregister_read.io.iss_uops := iss_uops
 
-   fregister_read.io.brinfo := io.brinfo
-   fregister_read.io.kill := io.flush_pipeline
+   hfregister_read.io.brinfo := io.brinfo
+   hfregister_read.io.kill := io.flush_pipeline
 
 
    //-------------------------------------------------------------
@@ -173,44 +174,43 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
    for ((ex,w) <- exe_units.withFilter(_.uses_iss_unit).map(x=>x).zipWithIndex)
    {
-      ex.io.req <> fregister_read.io.exe_reqs(w)
+      ex.io.req <> hfregister_read.io.exe_reqs(w)
       require (!ex.isBypassable)
 
       // TODO HACK only let one FPU issue port issue these.
       require (w == 0)
-      when (fregister_read.io.exe_reqs(w).bits.uop.uopc === uopSTD) {
+      when (hfregister_read.io.exe_reqs(w).bits.uop.uopc === uopSTD) {
          ex.io.req.valid :=  Bool(false)
       }
 
-      io.tosdq.valid    := fregister_read.io.exe_reqs(w).bits.uop.uopc === uopSTD
-      io.tosdq.bits.uop := fregister_read.io.exe_reqs(w).bits.uop
-      val sdata = fregister_read.io.exe_reqs(w).bits.rs2_data
+      io.tosdq.valid    := hfregister_read.io.exe_reqs(w).bits.uop.uopc === uopSTD
+      io.tosdq.bits.uop := hfregister_read.io.exe_reqs(w).bits.uop
+      val hdata = hfregister_read.io.exe_reqs(w).bits.rs2_data
 
-      val unrec_s = hardfloat.fNFromRecFN(8, 24, sdata)
-      val unrec_d = hardfloat.fNFromRecFN(11, 53, sdata)
-      val unrec_out = Mux(io.tosdq.bits.uop.fp_single, Cat(Fill(32, unrec_s(31)), unrec_s), unrec_d)
+      val unrec_h = hardfloat.fNFromRecFN(5, 11, hdata)
+      val unrec_out = Cat(Fill(48, unrec_s(15)), unrec_h)
 
       io.tosdq.bits.data := unrec_out
    }
    require (exe_units.num_total_bypass_ports == 0)
 
+   // 需要修改ifpu_unit --Jecy
    exe_units.ifpu_unit.io.req <> io.fromint
 
    //-------------------------------------------------------------
    // **** Writeback Stage ****
    //-------------------------------------------------------------
 
-   val ll_wbarb = Module(new Arbiter(new ExeUnitResp(fLen+1), 2))
+   val ll_wbarb = Module(new Arbiter(new ExeUnitResp(hfLen+1), 2))
    val ifpu_resp = exe_units.ifpu_unit.io.resp(0)
+
 
    // Hookup load writeback -- and recode FP values.
    ll_wbarb.io.in(0) <> io.ll_wport
    val typ = io.ll_wport.bits.uop.mem_typ
-   val load_single = typ === rocket.MT_W || typ === rocket.MT_WU
-   val rec_s = hardfloat.recFNFromFN( 8, 24, io.ll_wport.bits.data)
-   val rec_d = hardfloat.recFNFromFN(11, 53, io.ll_wport.bits.data)
-   val fp_load_data_recoded = Mux(load_single, Cat(SInt(-1, 32), rec_s), rec_d)
-   ll_wbarb.io.in(0).bits.data := fp_load_data_recoded
+   val rec_h = hardfloat.recFNFromFN(5, 11, io.ll_wport.bits.data)
+   val hfp_load_data_recoded = Cat(SInt(-1, 48), rec_h)
+   ll_wbarb.io.in(0).bits.data := hfp_load_data_recoded
 
    ll_wbarb.io.in(1) <> ifpu_resp
    if (regreadLatency > 0) {
@@ -218,9 +218,9 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       // Wakeup signal is sent on cycle S0, write is now delayed until end of S1,
       // but Issue happens on S1 and RegRead doesn't happen until S2 so we're safe.
       // (for regreadlatency >0).
-      fregfile.io.write_ports(0) <> WritePort(RegNext(ll_wbarb.io.out), FPREG_SZ, fLen+1)
+      hfregfile.io.write_ports(0) <> WritePort(RegNext(ll_wbarb.io.out), FPREG_SZ, hfLen+1)
    } else {
-      fregfile.io.write_ports(0) <> WritePort(ll_wbarb.io.out, FPREG_SZ, fLen+1)
+      hfregfile.io.write_ports(0) <> WritePort(ll_wbarb.io.out, FPREG_SZ, hfLen+1)
    }
 
    assert (ll_wbarb.io.in(0).ready) // never backpressure the memory unit.
@@ -244,12 +244,12 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
             // share with ll unit
          } else {
             assert (!(wbresp.valid && toint))
-            fregfile.io.write_ports(w_cnt).valid :=
+            hfregfile.io.write_ports(w_cnt).valid :=
                wbresp.valid &&
                wbresp.bits.uop.ctrl.rf_wen
-            fregfile.io.write_ports(w_cnt).bits.addr := wbresp.bits.uop.pdst
-            fregfile.io.write_ports(w_cnt).bits.data := wbresp.bits.data
-            wbresp.ready := fregfile.io.write_ports(w_cnt).ready
+            hfregfile.io.write_ports(w_cnt).bits.addr := wbresp.bits.uop.pdst
+            hfregfile.io.write_ports(w_cnt).bits.data := wbresp.bits.data
+            wbresp.ready := hfregfile.io.write_ports(w_cnt).ready
          }
 
          assert (!(wbresp.valid &&
@@ -266,7 +266,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
          if (!wbresp.bits.writesToIRF && !eu.has_ifpu) w_cnt += 1
       }
    }
-   require (w_cnt == fregfile.io.write_ports.length)
+   require (w_cnt == hfregfile.io.write_ports.length)
 
 
    //-------------------------------------------------------------
