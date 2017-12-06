@@ -27,12 +27,15 @@ class RenameStageIO(
    pl_width: Int,
    num_int_pregs: Int,
    num_fp_pregs: Int,
+   num_hfp_pregs: Int,  // Jecy
    num_int_wb_ports: Int,
-   num_fp_wb_ports: Int)
+   num_fp_wb_ports: Int,
+   num_hfp_wb_ports: Int) // Jecy
    (implicit p: Parameters) extends BoomBundle()(p)
 {
    private val int_preg_sz = log2Up(num_int_pregs)
    private val fp_preg_sz = log2Up(num_fp_pregs)
+   private val hfp_preg_sz = log2Up(num_hfp_pregs) // Jecy
 
    val inst_can_proceed = Vec(pl_width, Bool()).asOutput
 
@@ -60,6 +63,7 @@ class RenameStageIO(
    // issue stage (fast wakeup)
    val int_wakeups = Vec(num_int_wb_ports, Valid(new ExeUnitResp(xLen))).flip
    val fp_wakeups = Vec(num_fp_wb_ports, Valid(new ExeUnitResp(fLen+1))).flip
+   val hfp_wakeups = Vec(num_hfp_wb_ports, Valid(new ExeUnitResp(hfLen+1))).flip // Jecy
 
    // commit stage
    val com_valids = Vec(pl_width, Bool()).asInput
@@ -69,11 +73,10 @@ class RenameStageIO(
    val flush_pipeline = Bool(INPUT) // only used for SCR (single-cycle reset)
 
    val debug_rob_empty = Bool(INPUT)
-   val debug = new DebugRenameStageIO(num_int_pregs, num_fp_pregs).asOutput
+   val debug = new DebugRenameStageIO(num_int_pregs, num_fp_pregs, num_hfp_pregs).asOutput //  --Jecy
 }
 
-
-class DebugRenameStageIO(int_num_pregs: Int, fp_num_pregs: Int)(implicit p: Parameters) extends BoomBundle()(p)
+class DebugRenameStageIO(int_num_pregs: Int, fp_num_pregs: Int, hfp_num_pregs: Int)(implicit p: Parameters) extends BoomBundle()(p)
 {
    val ifreelist = Bits(width=int_num_pregs)
    val iisprlist = Bits(width=int_num_pregs)
@@ -81,17 +84,21 @@ class DebugRenameStageIO(int_num_pregs: Int, fp_num_pregs: Int)(implicit p: Para
    val ffreelist = Bits(width=fp_num_pregs)
    val fisprlist = Bits(width=fp_num_pregs)
    val fbusytable = UInt(width=fp_num_pregs)
-   override def cloneType: this.type = new DebugRenameStageIO(int_num_pregs, fp_num_pregs).asInstanceOf[this.type]
+   val hffreelist = Bits(width=hfp_num_pregs) // Jecy
+   val hfisprlist = Bits(width=hfp_num_pregs)
+   val hbusytable = UInt(width=hfp_num_pregs)
+   override def cloneType: this.type = new DebugRenameStageIO(int_num_pregs, fp_num_pregs,hfp_num_pregs).asInstanceOf[this.type]
 }
 
 
 class RenameStage(
    pl_width: Int,
    num_int_wb_ports: Int,
-   num_fp_wb_ports: Int)
+   num_fp_wb_ports: Int,
+   num_hfp_wb_ports: Int)  // Jecy
 (implicit p: Parameters) extends BoomModule()(p)
 {
-   val io = IO(new RenameStageIO(pl_width, numIntPhysRegs, numFpPhysRegs, num_int_wb_ports, num_fp_wb_ports))
+   val io = IO(new RenameStageIO(pl_width, numIntPhysRegs, numFpPhysRegs, numHfpPhysRegs, num_int_wb_ports, num_fp_wb_ports, num_hfp_wb_ports)) // Jecy
 
    // integer registers
    val imaptable = Module(new RenameMapTable(
@@ -126,6 +133,26 @@ class RenameStage(
       num_pregs = numFpPhysRegs,
       num_read_ports = pl_width*3,
       num_wb_ports = num_fp_wb_ports))
+
+   // Jecy
+   // half-precision floating point registers
+   val hfmaptable = Module(new RenameMapTable(
+      pl_width,
+      RT_FHT.litValue,
+      32,
+      numHfpPhysRegs))
+   val hffreelist = Module(new RenameFreeList(
+      pl_width,
+      RT_FHT.litValue,
+      num_pregs = numHfpPhysRegs,
+      num_read_ports = pl_width*3,
+      num_wb_ports = num_hfp_wb_ports))
+   val hfbusytable = Module(new BusyTable(
+      pl_width,
+      RT_FHT.litValue,
+      num_pregs = numHfpPhysRegs,
+      num_read_ports = pl_width*3,
+      num_wb_ports = num_hfp_wb_ports))
 
    //-------------------------------------------------------------
    // Pipeline State & Wires
@@ -170,7 +197,7 @@ class RenameStage(
    //-------------------------------------------------------------
    // Free List
 
-   for (list <- Seq(ifreelist, ffreelist))
+   for (list <- Seq(ifreelist, ffreelist,hffreelist))
    {
       list.io.brinfo := io.brinfo
       list.io.kill := io.kill
@@ -185,17 +212,19 @@ class RenameStage(
    }
 
    // 区分整数还是浮点，分配不同的寄存器 --Origin Jecy
-   for ((uop, w) <- ren1_uops.zipWithIndex)
+   for ((uop, w) <- ren1_uops.zipWithIndex) // Jecy
    {
       val i_preg = ifreelist.io.req_pregs(w)
       val f_preg = ffreelist.io.req_pregs(w)
-      uop.pdst := Mux(uop.dst_rtype === RT_FLT, f_preg, i_preg)
+      val h_preg = hffreelist.io.req_pregs(w) // Jecy
+
+      uop.pdst := Mux(Mux(uop.dst_rtype === RT_FHT, h_preg), Mux(uop.dst_rtype === RT_FLT, f_preg, i_preg)) // Jecy
    }
 
    //-------------------------------------------------------------
    // Rename Table
 
-   for (table <- Seq(imaptable, fmaptable))
+   for (table <- Seq(imaptable, fmaptable,hfmaptable))
    {
       table.io.brinfo := io.brinfo
       table.io.kill := io.kill
@@ -215,11 +244,13 @@ class RenameStage(
    {
       val imap = imaptable.io.values(w)
       val fmap = fmaptable.io.values(w)
+      val hfmap = hfmaptable.io.values(w) // Jecy
 
-      uop.pop1       := Mux(uop.lrs1_rtype === RT_FLT, fmap.prs1, imap.prs1)
-      uop.pop2       := Mux(uop.lrs2_rtype === RT_FLT, fmap.prs2, imap.prs2)
-      uop.pop3       := fmaptable.io.values(w).prs3 // only FP has 3rd operand
-      uop.stale_pdst := Mux(uop.dst_rtype === RT_FLT,  fmap.stale_pdst, imap.stale_pdst)
+      // Jecy
+      uop.pop1       := Mux(uop.lrs1_rtype === RT_FHT, hfmp.prs1, Mux(uop.lrs1_rtype === RT_FLT, fmap.prs1, imap.prs1))
+      uop.pop2       := Mux(uop.lrs1_rtype === RT_FHT, hfmp.prs1, Mux(uop.lrs2_rtype === RT_FLT, fmap.prs2, imap.prs2))
+      uop.pop3       := Mux(uop.lrs1_rtype === RT_FHT, hfmaptable.io.values(w).prs3, fmaptable.io.values(w).prs3)
+      uop.stale_pdst := Mux(uop.lrs1_rtype === RT_FHT, hfmap.stale_pdst, Mux(uop.dst_rtype === RT_FLT,  fmap.stale_pdst, imap.stale_pdst))
    }
 
    //-------------------------------------------------------------
@@ -238,6 +269,8 @@ class RenameStage(
                          else imaptable.io.values
    val ren2_fmapvalues = if (renameLatency == 2) RegEnable(fmaptable.io.values, ren2_will_proceed)
                          else fmaptable.io.values
+   val ren2_hfmapvalues = if(renameLatency == 2) RegEnable(hfmaptable.io.values, ren2_will_proceed) // Jecy
+                         else hfmaptable.io.values
 
    for (w <- 0 until pl_width)
    {
@@ -307,13 +340,25 @@ class RenameStage(
    assert (!(io.fp_wakeups.map(x => x.valid && x.bits.uop.dst_rtype =/= RT_FLT).reduce(_|_)),
       "[rename] fp wakeup is not waking up a FP register.")
 
+   // Jecy
+   hfbusytable.io.ren_will_fire := ren2_will_fire
+   hfbusytable.io.ren_uops := ren2_uops
+   hfbusytable.io.map_table := ren2_hfmapvalues
+   hfbusytable.io.wb_valids := io.hfp_wakeups.map(_.valid)
+   hfbusytable.io.wb_pdsts := io.hfp_wakeups.map(_.bits.op.pdst)
+
+   assert (!(io.hfp_wakeups.map(x => x.valid && x.bits.uop.dst_rtype =/= RT_FHT).reduce(_|_)), // what's the means?  -- Jecy
+      "[rename] hfp wakeup is not waking up a HFP register.")
+
    for ((uop, w) <- ren2_uops.zipWithIndex)
    {
       val ibusy = ibusytable.io.values(w)
       val fbusy = fbusytable.io.values(w)
-      uop.prs1_busy := Mux(uop.lrs1_rtype === RT_FLT, fbusy.prs1_busy, ibusy.prs1_busy)
-      uop.prs2_busy := Mux(uop.lrs2_rtype === RT_FLT, fbusy.prs2_busy, ibusy.prs2_busy)
-      uop.prs3_busy := fbusy.prs3_busy
+      val hfbusy = hfbusytable.io.values(w) // Jecy
+
+      uop.prs1_busy := Mux(uop.lrs1_rtype === RT_FHL, hfbusy.prs1_busy), Mux(uop.lrs1_rtype === RT_FLT, fbusy.prs1_busy, ibusy.prs1_busy)) // Jecy
+      uop.prs2_busy := Mux(uop.lrs1_rtype === RT_FHL, hfbusy.prs2_busy), Mux(uop.lrs2_rtype === RT_FLT, fbusy.prs2_busy, ibusy.prs2_busy))
+      uop.prs3_busy := Mux(uop.lrs1_rtype === RT_FHL, hfbusy.prs3_busy, fbusy.prs3_busy)
 
       val valid = ren2_valids(w)
       assert (!(valid && ibusy.prs1_busy && uop.lrs1_rtype === RT_FIX && uop.lrs1 === UInt(0)), "[rename] x0 is busy??")
@@ -334,9 +379,9 @@ class RenameStage(
       // Push back against Decode stage if Rename1 can't proceed (and Rename2/Dispatch can't receive).
       io.inst_can_proceed(w) :=
          ren2_will_proceed &&
-         ((ren1_uops(w).dst_rtype =/= RT_FIX && ren1_uops(w).dst_rtype =/= RT_FLT) ||
+         ((ren1_uops(w).dst_rtype =/= RT_FIX && ren1_uops(w).dst_rtype =/= RT_FLT && ren1_uops(w).dst_rtype =/= RT_FHT) ||  // Jecy
          (ifreelist.io.can_allocate(w) && ren1_uops(w).dst_rtype === RT_FIX) ||
-         (ffreelist.io.can_allocate(w) && ren1_uops(w).dst_rtype === RT_FLT))
+         (ffreelist.io.can_allocate(w) && ren1_uops(w).dst_rtype === RT_FLT && ren1_uops(w).dst_rtype === RT_FHT))  // Jecy
    }
 
 
@@ -349,5 +394,8 @@ class RenameStage(
    io.debug.ffreelist  := ffreelist.io.debug.freelist
    io.debug.fisprlist  := ffreelist.io.debug.isprlist
    io.debug.fbusytable := fbusytable.io.debug.busytable
+   io.debug.hffreelist := hffreelist.io.debug.freelist
+   io.debug.hfisprlist := hffreelist.io.debug.isprlist
+   io.debug.hfbusytable:= hfbusytable.io.debug.busytable // -- Jecy
 }
 
