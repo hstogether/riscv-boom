@@ -22,6 +22,7 @@ case class BoomCoreParams(
    numLsuEntries: Int = 8,
    numIntPhysRegisters: Int = 96,
    numFpPhysRegisters: Int = 64,
+   numHfpPhysRegisters: Int = 64,  // Jecy
    enableCustomRf: Boolean = false,
    enableCustomRfModel: Boolean = true,
    maxBrCount: Int = 4,
@@ -80,6 +81,7 @@ trait HasBoomCoreParameters extends tile.HasCoreParameters
 
    val numIntPhysRegs   = boomParams.numIntPhysRegisters // size of the integer physical register file
    val numFpPhysRegs    = boomParams.numFpPhysRegisters  // size of the floating point physical register file
+   val numHfpPysRegs    = boomParams.numHfpPhysRegisters  // size of the half-precision floating-point physical register file --Jecy
 
 
    val enableFetchBufferFlowThrough = boomParams.enableFetchBufferFlowThrough
