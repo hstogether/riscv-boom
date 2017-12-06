@@ -73,7 +73,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    val dec_serializer   = Module(new FetchSerializerNtoM)
    val decode_units     = for (w <- 0 until DECODE_WIDTH) yield { val d = Module(new DecodeUnit); d }
    val dec_brmask_logic = Module(new BranchMaskGenerationLogic(DECODE_WIDTH))
-   val rename_stage     = Module(new RenameStage(DECODE_WIDTH, num_wakeup_ports, fp_pipeline.io.wakeups.length, hfp_pipeline.io.wakeups.length)) // TODO: fix RenameStage -- Jecy
+   val rename_stage     = Module(new RenameStage(DECODE_WIDTH, num_wakeup_ports, fp_pipeline.io.wakeups.length, hfp_pipeline.io.wakeups.length)) // Jecy
    val issue_units      = new boom.IssueUnits(num_wakeup_ports)
    val iregfile         = if (regreadLatency == 1 && enableCustomRf) {
                               Module(new RegisterFileSeqCustomArray(numIntPhysRegs,
@@ -456,6 +456,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
             int_wakeups(wu_idx).bits.uop := iss_uops(i)
             wu_idx += 1
             assert (!(iss_uops(i).dst_rtype === RT_FLT && iss_uops(i).bypassable), "Bypassing FP is not supported.")
+            assert (!(iss_uops(i).dst_rtype === RT_FHT && iss_uops(i).bypassable),"Bypassing HFP is not supported.") // Jecy
          }
 
          // Slow Wakeup (uses write-port to register file)
@@ -483,7 +484,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    {
       renport <> fpport
    }
-   for ((renport, hfpport) <- rename_stage.io.fp_wakeups zip hfp_pipeline.io.wakeups) // Jecy
+   for ((renport, hfpport) <- rename_stage.io.hfp_wakeups zip hfp_pipeline.io.wakeups) // Jecy
    {
       renport <> hfpport
    }
@@ -1283,6 +1284,14 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
          , PopCount(rename_stage.io.debug.ffreelist)
          , rename_stage.io.debug.fisprlist
          , PopCount(rename_stage.io.debug.fisprlist)
+         )
+
+      // Jecy
+      printf("                                      fl: 0x%x (%d) is: 0x%x (%d)\n"
+         , rename_stage.io.debug.hffreelist
+         , PopCount(rename_stage.io.debug.hffreelist)
+         , rename_stage.io.debug.hfisprlist
+         , PopCount(rename_stage.io.debug.hfisprlist)
          )
 
       // branch unit
