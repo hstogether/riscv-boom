@@ -184,6 +184,7 @@ class RenameStage(
       list.io.debug_rob_empty := io.debug_rob_empty
    }
 
+   // 区分整数还是浮点，分配不同的寄存器 --Origin Jecy
    for ((uop, w) <- ren1_uops.zipWithIndex)
    {
       val i_preg = ifreelist.io.req_pregs(w)

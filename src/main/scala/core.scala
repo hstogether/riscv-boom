@@ -527,6 +527,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       }
    }
 
+   // 将dispatch的指令（经过译码和重命名）发送到浮点流水线，进行发射、读操作数、执行、会写等操作 -- Jecy
    fp_pipeline.io.dis_valids <> dis_valids
    fp_pipeline.io.dis_uops <> dis_uops
 

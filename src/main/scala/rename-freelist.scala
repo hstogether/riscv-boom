@@ -86,8 +86,8 @@ class RenameFreeListHelper(
    // find new,free physical registers
 
    val requested_pregs_oh_array = Array.fill(pl_width,num_phys_registers){Bool(false)}
-   val requested_pregs_oh       = Wire(Vec(pl_width, Bits(width=num_phys_registers)))
-   val requested_pregs          = Wire(Vec(pl_width, UInt(width=log2Up(num_phys_registers))))
+   val requested_pregs_oh       = Wire(Vec(pl_width, Bits(width=num_phys_registers)))  // 指令分配的物理寄存器的 one-hot表示 -- Origin Jecy
+   val requested_pregs          = Wire(Vec(pl_width, UInt(width=log2Up(num_phys_registers))))  // 指令分配的物理寄存器 二进制表示  --Origin Jecy
    var allocated                = Wire(Vec(pl_width, Bool())) // did each inst get allocated a register?
 
    // init
@@ -101,11 +101,11 @@ class RenameFreeListHelper(
    for (i <- 1 until num_phys_registers)
    {
       val next_allocated = Wire(Vec(pl_width, Bool()))
-      var can_allocate = free_list(i)
+      var can_allocate = free_list(i) // 物理寄存器 i 是否 free ： 0 否，1 是  -- Origin Jecy
 
       for (w <- 0 until pl_width)
       {
-         requested_pregs_oh_array(w)(i) = can_allocate && !allocated(w)
+         requested_pregs_oh_array(w)(i) = can_allocate && !allocated(w) // 可以分配，并且没有被同指令包中的其他指令分配  -- Origin Jecy
 
          next_allocated(w) := can_allocate | allocated(w)
          can_allocate = can_allocate && allocated(w)
