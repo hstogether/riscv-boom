@@ -125,10 +125,11 @@ trait ScalarOpConstants
 
 
    // Decode Stage Control Signals
-   val RT_FIX   = UInt(0, 2)
-   val RT_FLT   = UInt(1, 2)
-   val RT_PAS   = UInt(3, 2) // pass-through (pop1 := lrs1, etc)
-   val RT_X     = UInt(2, 2) // not-a-register (but shouldn't get a busy-bit, etc.)
+   val RT_FIX   = UInt(0, 3)
+   val RT_FLT   = UInt(1, 3)
+   val RT_FHT   = UInt(4, 3) // Jecy what's the mean?
+   val RT_PAS   = UInt(3, 3) // pass-through (pop1 := lrs1, etc)
+   val RT_X     = UInt(2, 3) // not-a-register (but shouldn't get a busy-bit, etc.)
                              // TODO rename RT_NAR
 
    // Micro-op opcodes
