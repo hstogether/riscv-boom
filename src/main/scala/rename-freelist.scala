@@ -292,7 +292,7 @@ class RenameFreeList(
 
       freelist.io.enq_vals(w)       := io.com_valids(w) &&
                                        io.com_uops(w).dst_rtype === UInt(rtype) &&
-                                       (io.com_uops(w).stale_pdst =/= UInt(0) || UInt(rtype) === RT_FLT)
+                                       (io.com_uops(w).stale_pdst =/= UInt(0) || UInt(rtype) === RT_FLT || UInt(rtype) === RT_FHL) // Jecy
       freelist.io.enq_pregs(w)      := io.com_uops(w).stale_pdst
 
       freelist.io.ren_br_vals(w)    := io.ren_br_vals(w)
@@ -300,12 +300,12 @@ class RenameFreeList(
 
 
       freelist.io.rollback_wens(w)  := io.com_rbk_valids(w) &&
-                                       (io.com_uops(w).pdst =/= UInt(0) || UInt(rtype) === RT_FLT) &&
+                                       (io.com_uops(w).pdst =/= UInt(0) || UInt(rtype) === RT_FLT || UInt(rtype) === RT_FHL) && // Jecy
                                        io.com_uops(w).dst_rtype === UInt(rtype)
       freelist.io.rollback_pdsts(w) := io.com_uops(w).pdst
 
       freelist.io.com_wens(w)       := io.com_valids(w) &&
-                                       (io.com_uops(w).pdst =/= UInt(0) || UInt(rtype) === RT_FLT) &&
+                                       (io.com_uops(w).pdst =/= UInt(0) || UInt(rtype) === RT_FLT || UInt(rtype) === RT_FHL) && // Jecy
                                        io.com_uops(w).dst_rtype === UInt(rtype)
       freelist.io.com_uops(w)       := io.com_uops(w)
 
