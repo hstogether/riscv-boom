@@ -174,6 +174,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    println("   Load/Store Unit Size  : " + NUM_LSU_ENTRIES + "/" + NUM_LSU_ENTRIES)
    println("   Num Int Phys Registers: " + numIntPhysRegs)
    println("   Num FP  Phys Registers: " + numFpPhysRegs)
+   println("   Num HFP Phys Registers: " + numHfPPhysRegs)
    println("   Max Branch Count      : " + MAX_BR_COUNT)
    println("   BTB Size              : " +
       (if (enableBTB) ("" + boomParams.btb.nSets * boomParams.btb.nWays + " entries (" +
