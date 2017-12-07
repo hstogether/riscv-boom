@@ -104,6 +104,7 @@ abstract class IssueUnit(
       val typ_str = if (iqType == IQT_INT.litValue) "int"
                     else if (iqType == IQT_MEM.litValue) "mem"
                     else if (iqType == IQT_FP.litValue) " fp"
+                    else if (iqType == IQT_HFP.litValue) "hfp"
                     else "unknown"
       for (i <- 0 until num_issue_slots)
       {

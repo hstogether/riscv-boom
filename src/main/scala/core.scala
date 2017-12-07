@@ -1135,7 +1135,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    csr.io.events(31) := !issue_units(0).io.dis_readys.reduce(_&_)
    csr.io.events(32) := !issue_units(1).io.dis_readys.reduce(_&_)
    csr.io.events(33) := !fp_pipeline.io.dis_readys.reduce(_&_)
-   csr.io.events(38) := !hfp_pipeline.io.dis_readys.reduce(_&_)
+   csr.io.events(38) := !hfp_pipeline.io.dis_readys.reduce(_&_) // Jecy
 
    assert (!(Range(0,COMMIT_WIDTH).map{w =>
       rob.io.commit.valids(w) && rob.io.commit.uops(w).is_br_or_jmp && rob.io.commit.uops(w).is_jal &&
