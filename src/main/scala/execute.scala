@@ -38,7 +38,7 @@ class ExeUnitResp(data_width: Int)(implicit p: Parameters) extends BoomBundle()(
 class FFlagsResp(implicit p: Parameters) extends BoomBundle()(p)
 {
    val uop = new MicroOp()
-   val flags = Bits(width=tile.FPConstants.FLAGS_SZ)
+   val flags = Bits(width=tile.FPConstants.FLAGS_SZ) // tile.FPConstants中的主要编码是浮点指令的func5，即高5-bit，所有精度都相同 -- Jecy
 }
 
 class ExecutionUnitIO(num_rf_read_ports: Int
