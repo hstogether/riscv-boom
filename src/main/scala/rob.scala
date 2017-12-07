@@ -187,13 +187,13 @@ class Rob(width: Int,
                                    // around, thus the banks must have equal
                                    // numbers of items.
 
-   println("    Machine Width  : " + width); require (isPow2(width))
-   println("    Rob Entries    : " + num_rob_entries)
-   println("    Rob Rows       : " + num_rob_rows)
-   println("    Rob Row size   : " + log2Up(num_rob_rows))
-   println("    log2UP(width)  : " + log2Up(width))
-   println("    log2Ceil(width): " + log2Ceil(width))
-   println("    FPU FFlag Ports: " + num_fpu_ports)
+   println("    Machine Width       : " + width); require (isPow2(width))
+   println("    Rob Entries         : " + num_rob_entries)
+   println("    Rob Rows            : " + num_rob_rows)
+   println("    Rob Row size        : " + log2Up(num_rob_rows))
+   println("    log2UP(width)       : " + log2Up(width))
+   println("    log2Ceil(width)     : " + log2Ceil(width))
+   println("    FPU/HFPU FFlag Ports: " + num_fpu_ports) // Jecy
 
    val s_reset :: s_normal :: s_rollback :: s_wait_till_empty :: Nil = Enum(UInt(),4)
    val rob_state = Reg(init = s_reset)
@@ -669,20 +669,20 @@ class Rob(width: Int,
    {
       // TODO can I relax the ld/st constraint?
       fflags_val(w) := io.commit.valids(w) &&
-                       io.commit.uops(w).fp_val &&
+                       io.commit.uops(w).fp_val && io.commit.uops(w).hfp_val && // Jecy
                       !(io.commit.uops(w).is_load || io.commit.uops(w).is_store)
 
       fflags(w) := Mux(fflags_val(w), rob_head_fflags(w), Bits(0))
 
       assert (!(io.commit.valids(w) &&
-               !io.commit.uops(w).fp_val &&
+               !io.commit.uops(w).fp_val && !io.commit.uops(w).hfp_val && // Jecy
                rob_head_fflags(w) =/= Bits(0)),
-               "Committed non-FP instruction has non-zero fflag bits.")
+               "Committed non-FP/HFP instruction has non-zero fflag bits.") // Jecy
       assert (!(io.commit.valids(w) &&
-               io.commit.uops(w).fp_val &&
+               io.commit.uops(w).fp_val && io.commit.uops(w).hfp_val && // Jecy
                (io.commit.uops(w).is_load || io.commit.uops(w).is_store) &&
                rob_head_fflags(w) =/= Bits(0)),
-               "Committed FP load or store has non-zero fflag bits.")
+               "Committed FP/HFP load or store has non-zero fflag bits.") // Jecy
    }
    io.commit.fflags.valid := fflags_val.reduce(_|_)
    io.commit.fflags.bits  := fflags.reduce(_|_)
