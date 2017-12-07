@@ -905,51 +905,32 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
          // for commit logging...
          rob.io.debug_wb_valids(cnt) := resp.valid &&
                                         wb_uop.ctrl.rf_wen &&
-                                        (wb_uop.dst_rtype === RT_FIX || wb_uop.dst_rtype === RT_FLT)
+                                        (wb_uop.dst_rtype === RT_FIX || wb_uop.dst_rtype === RT_FLT || wb_uop.dst_rtype === RT_FHT) // Jecy
 
          val data = resp.bits.data
          // TODO: fixd me!
          // Jecy
-         if (eu.hasFFlags || (eu.is_mem_unit && usingFPU && usingHFPU))
+         if (eu.hasFFlags || (eu.is_mem_unit && (usingFPU || usingHFPU))
          {
             if (eu.hasFFlags)
             {
                rob.io.fflags(f_cnt) <> resp.bits.fflags
                f_cnt += 1
             }
+            val unrec_h = hardfloat.fNFromRecFN(5, 11, data) // jecy
             val unrec_s = hardfloat.fNFromRecFN(8, 24, data)
             val unrec_d = hardfloat.fNFromRecFN(11, 53, data)
-            val unrec_out     = Mux(wb_uop.fp_single, Cat(UInt(0,32), unrec_s), unrec_d)
+            val unrec_out     = Mux(wb_uop.hfp_val, Cat(UInt(0,48),unrec_h), Mux(wb_uop.fp_single, Cat(UInt(0,32), unrec_s), unrec_d)) // Jecy
             if (eu.uses_csr_wport && (j == 0))
             {
                rob.io.debug_wb_wdata(cnt) := Mux(wb_uop.ctrl.csr_cmd =/= rocket.CSR.N, csr.io.rw.rdata,
-                                             Mux(wb_uop.fp_val && wb_uop.dst_rtype === RT_FLT, unrec_out,
+                                             Mux(wb_uop.fp_val && wb_uop.dst_rtype === RT_FLT ||
+                                                 wb_uop.hfp_val && wb_uop.dst_rtype === RT_FHT, unrec_out, // Jecy
                                                                                                data))
             }
             else
             {
-               rob.io.debug_wb_wdata(cnt) := Mux(resp.bits.uop.fp_val, unrec_out, data)
-            }
-         }
-         else if (eu.hasFFlags || (eu.is_mem_unit && usingFPU))
-         {
-            if (eu.hasFFlags)
-            {
-               rob.io.fflags(f_cnt) <> resp.bits.fflags
-               f_cnt += 1
-            }
-            val unrec_s = hardfloat.fNFromRecFN(8, 24, data)
-            val unrec_d = hardfloat.fNFromRecFN(11, 53, data)
-            val unrec_out     = Mux(wb_uop.fp_single, Cat(UInt(0,32), unrec_s), unrec_d)
-            if (eu.uses_csr_wport && (j == 0))
-            {
-               rob.io.debug_wb_wdata(cnt) := Mux(wb_uop.ctrl.csr_cmd =/= rocket.CSR.N, csr.io.rw.rdata,
-                                             Mux(wb_uop.fp_val && wb_uop.dst_rtype === RT_FLT, unrec_out,
-                                                                                               data))
-            }
-            else
-            {
-               rob.io.debug_wb_wdata(cnt) := Mux(resp.bits.uop.fp_val, unrec_out, data)
+               rob.io.debug_wb_wdata(cnt) := Mux(resp.bits.uop.fp_val || resp.bits.uop.hfp_val, unrec_out, data) // Jecy
             }
          }
          else
