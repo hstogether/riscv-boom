@@ -67,7 +67,7 @@ class LoadStoreUnitIO(pl_width: Int)(implicit p: Parameters) extends BoomBundle(
    // Execute Stage
    val exe_resp           = (new ValidIO(new FuncUnitResp(xLen))).flip
    val fp_stdata          = Valid(new MicroOpWithData(fLen)).flip
-   val hfp_stdata         = Valid(new MicroOpWithData(fLen)).flip  // Jecy
+   val hfp_stdata         = Valid(new MicroOpWithData(hfLen)).flip  // Jecy
 
    // Commit Stage
    val commit_store_mask  = Vec(pl_width, Bool()).asInput
@@ -598,9 +598,10 @@ class LoadStoreUnit(pl_width: Int)(implicit p: Parameters, edge: uncore.tilelink
    }
    assert(!(io.hfp_stdata.valid && io.exe_resp.valid && io.exe_resp.bits.uop.ctrl.is_std &&
       io.hfp_stdata.bits.uop.stq_idx === io.exe_resp.bits.uop.stq_idx),
-      "[lsu] HFP and INT data is fighting over the same sdq entry.")
+      "[lsu] HFP and FP and INT data is fighting over the same sdq entry.")
 
    require (xLen >= fLen) // otherwise the SDQ is missized.
+   require (xLen >= hfLen) // otherwise the SDQ is missized. -- Jecy
 
    //-------------------------------------------------------------
    //-------------------------------------------------------------
@@ -683,23 +684,28 @@ class LoadStoreUnit(pl_width: Int)(implicit p: Parameters, edge: uncore.tilelink
    val mem_uop_stdf = RegNext(io.fp_stdata.bits.uop)
    val mem_uop_stdhf = RegNext(io.hfp_stdata.bits.uop) // Jecy
    val stdf_clr_bsy_valid = RegNext(mem_fired_stdf &&
-                           mem_fired_stdhf &&  // Jecy
                            saq_val(mem_uop_stdf.stq_idx) &&
                            !saq_is_virtual(mem_uop_stdf.stq_idx) &&
                            !mem_uop_stdf.is_amo &&
                            !IsKilledByBranch(io.brinfo, mem_uop_stdf) &&
-                           saq_val(mem_uop_stdhf.stq_idx) &&  // Jecy
+                           !io.exception && !RegNext(io.exception))
+   val stdhf_clr_bsy_valid = RegNext(mem_fired_stdhf &&  // Jecy
+                           saq_val(mem_uop_stdhf.stq_idx) &&
                            !saq_is_virtual(mem_uop_stdhf.stq_idx) &&
                            !mem_uop_stdhf.is_amo &&
-                           !IsKilledByBranch(io.brinfo, mem_uop_stdhf)) &&
-                           !io.exception && !RegNext(io.exception)
-   val stdf_clr_bsy_robidx = RegEnable(mem_uop_stdf.rob_idx, mem_fired_stdf) // TODO: add mem_fired_stdhf -- Jecy
-   val stdf_clr_bsy_brmask = RegEnable(GetNewBrMask(io.brinfo, mem_uop_stdf), mem_fired_stdf) // TODO: add mem_fired_stdhf -- Jecy
+                           !IsKilledByBranch(io.brinfo, mem_uop_stdhf) &&
+                           io.exception && !RegNext(io.exception))
+   val stdf_clr_bsy_robidx = RegEnable(mem_uop_stdf.rob_idx, mem_fired_stdf)
+   val stdf_clr_bsy_brmask = RegEnable(GetNewBrMask(io.brinfo, mem_uop_stdf), mem_fired_stdf)
+   val stdhf_clr_bsy_robidx = RegEnable(mem_uop_stdhf.rob_idx, mem_fired_stdhf) // Jecy
+   val stdhf_clr_bsy_brmask = REgEnable(GetNewBrMask(io.brinfo,mem_uop_stdhf), mem_fired_stdhf) // Jecy
 
    io.lsu_clr_bsy_valid(0)   := clr_bsy_valid && !io.exception && !IsKilledByBranch(io.brinfo, clr_bsy_brmask)
    io.lsu_clr_bsy_rob_idx(0) := clr_bsy_robidx
    io.lsu_clr_bsy_valid(1)   := stdf_clr_bsy_valid && !io.exception && !IsKilledByBranch(io.brinfo, stdf_clr_bsy_brmask)
    io.lsu_clr_bsy_rob_idx(1) := stdf_clr_bsy_robidx
+   io.lsu_clr_bsy_valid(2)   := stdhf_clr_bsy_valid && !io.exception && !IsKilledByBranch(io.brionfo, stdhf_clr_bsy_brmask) // Jecy
+   io.lsu_clr_bsy_rob_idx(2) := stdhf_clr_bsy_robidx // Jecy
 
    //-------------------------------------------------------------
    // Load Issue Datapath (ALL loads need to use this path,
