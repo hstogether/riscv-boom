@@ -162,8 +162,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    else                  println ("    VM       Disabled")
    if (usingFDivSqrt)    println ("    FDivSqrt Enabled\n")
    else                  println ("    FDivSqrt Disabled\n")
-   if (usingHFPU)         println ("\n    HFPU Unit Enabled")
-   else                  println ("\n   HFPU Unit Disabled")
+   if (usingHFPU)        println ("\n    HFPU Unit Enabled")
+   else                  println ("\n    HFPU Unit Disabled")
 
    val iss_str = if (enableAgePriorityIssue) " (Age-based Priority)"
                  else " (Unordered Priority)"
@@ -746,7 +746,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    lsu.io.dmem_is_ordered:= dc_shim.io.core.ordered
 
    lsu.io.fp_stdata <> fp_pipeline.io.tosdq
-   lsu.io.hfp_stdata <> hfp_pipeline.io.tosdq // TODO: Add fhp_stadata in lsu. -- Jecy
+   lsu.io.hfp_stdata <> hfp_pipeline.io.tosdq // Jecy
 
 
    //-------------------------------------------------------------
