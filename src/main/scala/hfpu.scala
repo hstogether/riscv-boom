@@ -5,6 +5,7 @@
 
 // Jecy 20171130
 // FP16 unit
+// TODO：寻找关于hfp_val的传递过程
 
 package boom
 {
@@ -110,7 +111,7 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
 {
    val io = IO(new Bundle
    {
-      val req = new ValidIO(new FpuReq).flip
+      val req = new ValidIO(new HFpuReq).flip
       val resp = new ValidIO(new ExeUnitResp(65))
    })
 
@@ -119,9 +120,9 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
    val io_req = io.req.bits
 
    val hfp_decoder = Module(new UOPCodeHFPUDecoder)
-   hfp_decoder.io.uopc:= io_req.uop.uopc
+   hfp_decoder.io.uopc:= io_req.uop.uopc // 微操作码，eg：uopADD_H
    val hfp_ctrl = hfp_decoder.io.sigs
-   val hfp_rm = Mux(ImmGenRm(io_req.uop.imm_packed) === Bits(7), io_req.fcsr_rm, ImmGenRm(io_req.uop.imm_packed))
+   val hfp_rm = Mux(ImmGenRm(io_req.uop.imm_packed) === Bits(7), io_req.fcsr_rm, ImmGenRm(io_req.uop.imm_packed)) // 选择舍入方式(111寄存器，其他指令中)
 
    val req = Wire(new tile.FPInput)
    req := hfp_ctrl
@@ -131,36 +132,36 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
    req.in3 := io_req.rs3_data
    when (hfp_ctrl.swap23) { req.in3 := io_req.rs2_data }
 
-   req.typ := ImmGenTyp(io_req.uop.imm_packed)
+   req.typ := ImmGenTyp(io_req.uop.imm_packed) // 获得当前指令的类型，00单精度；01双精度；10半精度
 
 
    val hfma = Module(new tile.FPUFMAPipe(latency = hfpu_latency, expWidth = 5, sigWidth = 11))
-   hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && !hfp_ctrl.single
+   hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && req.type === Bits(2)
    hfma.io.in.bits := req
 
 
-   val fpiu = Module(new tile.FPToInt)
-   fpiu.io.in.valid := io.req.valid && (hfp_ctrl.toint || hfp_ctrl.cmd === FCMD_MINMAX)
-   fpiu.io.in.bits := req
-   val fpiu_out = Pipe(Reg(next=fpiu.io.in.valid && !hfp_ctrl.fastpipe),
-                       fpiu.io.out.bits, hfpu_latency-1)
-   val fpiu_result  = Wire(new tile.FPResult)
-   fpiu_result.data := fpiu_out.bits.toint
-   fpiu_result.exc  := fpiu_out.bits.exc
+   val hfpiu = Module(new tile.FPToInt) // TODO: Modify to work for HFP
+   hfpiu.io.in.valid := io.req.valid && (hfp_ctrl.toint || hfp_ctrl.cmd === FCMD_MINMAX)
+   hfpiu.io.in.bits := req
+   val hfpiu_out = Pipe(Reg(next=hfpiu.io.in.valid && !hfp_ctrl.fastpipe),
+                       hfpiu.io.out.bits, hfpu_latency-1)
+   val hfpiu_result  = Wire(new tile.FPResult)
+   hfpiu_result.data := hfpiu_out.bits.toint
+   hfpiu_result.exc  := hfpiu_out.bits.exc
 
+   // Modify to work for HFP
+   val hfpmu = Module(new tile.FPToFP(hfpu_latency)) // latency 2 for rocket
+   hfpmu.io.in.valid := io.req.valid && hfp_ctrl.fastpipe
+   hfpmu.io.in.bits := req
+   hfpmu.io.lt := hfpiu.io.out.bits.lt
 
-   val fpmu = Module(new tile.FPToFP(hfpu_latency)) // latency 2 for rocket
-   fpmu.io.in.valid := io.req.valid && hfp_ctrl.fastpipe
-   fpmu.io.in.bits := req
-   fpmu.io.lt := fpiu.io.out.bits.lt
-
-   // Response (all FP units have been padded out to the same latency)
-   io.resp.valid := fpiu_out.valid ||
-                    fpmu.io.out.valid ||
+   // Response (all HFP units have been padded out to the same latency)
+   io.resp.valid := hfpiu_out.valid ||
+                    hfpmu.io.out.valid ||
                     hfma.io.out.valid
    val hfpu_out   = Mux(hfma.io.out.valid, hfma.io.out.bits,
-                   Mux(fpiu_out.valid,    fpiu_result,
-                                          fpmu.io.out.bits))
+                   Mux(hfpiu_out.valid,    hfpiu_result,
+                                          hfpmu.io.out.bits))
 
    io.resp.bits.data              := hfpu_out.data
    io.resp.bits.fflags.valid      := io.resp.valid
