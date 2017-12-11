@@ -54,7 +54,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    //**********************************
    // construct all of the modules
 
-   val exe_units        = new boom.ExecutionUnits(hfpu=true)
+   val exe_units        = new boom.ExecutionUnits(fpu=false,hfpu=true)
    val issue_unit       = Module(new IssueUnitCollasping(
                            issueParams.find(_.iqType == IQT_HFP.litValue).get,
                            num_wakeup_ports))

@@ -53,7 +53,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    // construct all of the modules
 
    // Only holds integer-registerfile execution units.
-   val exe_units        = new boom.ExecutionUnits(fpu=false)
+   val exe_units        = new boom.ExecutionUnits(fpu=false,hfpu=false) // Jecy
    // Meanwhile, the FP pipeline holds the FP issue window, FP regfile, and FP arithmetic units.
    var fp_pipeline: FpPipeline = null
    var hfp_pipeline: HfpPipeline = null  // Jecy
