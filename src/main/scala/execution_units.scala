@@ -117,8 +117,10 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
          val is_last = w == (int_width-2)
          exe_units += Module(new ALUExeUnit(has_ifpu = is_last))
       }
-   } else if(fpu && !hfpu){
-      require (usingFPU && !usingHFPU) // Jecy
+   }
+   // 分开检测每个单元 -- Jecy
+   if(fpu){
+      require (usingFPU)
       val fp_width = issueParams.find(_.iqType == IQT_FP.litValue).get.issueWidth
       require (fp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.
       for (w <- 0 until fp_width) {
@@ -127,25 +129,18 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
                                             has_fpiu = (w==0)))
       }
       exe_units += Module(new IntToFPExeUnit())
-   } else { // Jecy
-      require (usingFPU && usingHFPU)
-      val fp_width = issueParams.find(_.iqType == IQT_FP.litValue).get.issueWidth
-      require (fp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.
-      for (w <- 0 until fp_width) {
-         exe_units += Module(new FPUExeUnit(has_fpu = true,
-                                            has_fdiv = usingFDivSqrt && (w==0),
-                                            has_fpiu = (w==0)))
-      }
-
+   }
+   if(hfpu) { // Jecy
+      require (usingHFPU)
       val hfp_width = issueParams.find(_.iqType == IQT_HFP.litValue).get.issueWidth
       require (hfp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.
       for (w <- 0 until hfp_width) {
          exe_units += Module(new HFPUExeUnit(has_hfpu = true,
-                                            has_fdiv = usingFDivSqrt && (w==0),
-                                            has_fpiu = (w==0)))
+                                             has_hfdiv = usingHFDivSqrt && (w==0),
+                                             has_hfpiu = (w==0)))
       }
 
-      exe_units += Module(new IntToFPExeUnit())
+      exe_units += Module(new IntToFPExeUnit()) // TODO: Modify to IntoHFPExeUnit() -- Jecy
    }
 
 
