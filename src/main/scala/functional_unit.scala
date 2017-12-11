@@ -728,7 +728,7 @@ class IntToFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
 
 // Jecy 20171130
 class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
-   num_stages = p(BoomKey).intToFpLatency,
+   num_stages = p(BoomKey).intToFpLatency, // TODO: need to Fixed Jecy
    num_bypass_stages = 0,
    earliest_bypass_stage = 0,
    data_width = 65)(p)
@@ -738,7 +738,7 @@ class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    hfp_decoder.io.uopc := io_req.uop.uopc
    val fp_ctrl = hfp_decoder.io.sigs
    val fp_rm = Mux(ImmGenRm(io_req.uop.imm_packed) === Bits(7), io.fcsr_rm, ImmGenRm(io_req.uop.imm_packed))
-   val req = Wire(new tile.FPInput)
+   val req = Wire(new tile.HFPInput)
    req := fp_ctrl
    req.rm := fp_rm
    req.in1 := io_req.rs1_data
@@ -751,7 +751,7 @@ class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    assert (!(io.req.valid && !fp_ctrl.fromint),
       "[func] Only support fromInt micro-ops.")
 
-   val ifpu = Module(new tile.IntToFP(intToFpLatency))  // The IntToFP Unit maby need to fixed. -- Jecy
+   val ifpu = Module(new tile.IntToHFP(intToFpLatency))
    ifpu.io.in.valid := io.req.valid
    ifpu.io.in.bits := req
 
