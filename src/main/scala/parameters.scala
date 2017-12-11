@@ -48,7 +48,8 @@ case class BoomCoreParams(
    fetchLatency: Int = 3,
    renameLatency: Int = 2,
    regreadLatency: Int = 1,
-   enableHFPU: Boolean = true // Jecy add HFPU
+   enableHFPU: Boolean = true, // Jecy add HFPU
+   enableHFDivSqrt: Boolean = false // Disable HFDivSqrt -- Jecy
 )
 
 trait HasBoomCoreParameters extends tile.HasCoreParameters
@@ -93,6 +94,7 @@ trait HasBoomCoreParameters extends tile.HasCoreParameters
    val mulDivParams = rocketParams.mulDiv.getOrElse(MulDivParams())
 
    val usingHFPU = boomParams.enableHFPU // Jecy add usingHFP singnel
+   val usingHFDivSqrt = boomParams.enableHFDivSqrt // disable HFDivSqrt -- Jecy
 
    //************************************
    // Pipelining
