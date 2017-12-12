@@ -137,7 +137,7 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
       for (w <- 0 until hfp_width) {
          exe_units += Module(new HFPUExeUnit(has_hfpu = true,
                                              has_hfdiv = usingHFDivSqrt && (w==0),
-                                             has_hfpiu = (w==0)))
+                                             has_hfpiu = false)) //(w==0))) -- Jecy
       }
 
       exe_units += Module(new IntToFPExeUnit()) // TODO: Modify to IntoHFPExeUnit() -- Jecy
@@ -146,16 +146,20 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
 
    require (exe_units.length != 0)
    // if this is for FPU units, we don't need a memory unit (or other integer units)..
-   require (exe_units.map(_.is_mem_unit).reduce(_|_) || fpu, "Datapath is missing a memory unit.")
-   require (exe_units.map(_.has_mul).reduce(_|_) || fpu, "Datapath is missing a multiplier.")
-   require (exe_units.map(_.has_div).reduce(_|_) || fpu, "Datapath is missing a divider.")
-   require (exe_units.map(_.has_fpu).reduce(_|_) == usingFPU || !fpu, "Datapath is missing a fpu (or has an fpu and shouldnt).")
+   if(fpu){ // Only fpu go through this path -- Jecy
+      require (exe_units.map(_.is_mem_unit).reduce(_|_) || fpu, "Datapath is missing a memory unit.")
+      require (exe_units.map(_.has_mul).reduce(_|_) || fpu, "Datapath is missing a multiplier.")
+      require (exe_units.map(_.has_div).reduce(_|_) || fpu, "Datapath is missing a divider.")
+      require (exe_units.map(_.has_fpu).reduce(_|_) == usingFPU || !fpu, "Datapath is missing a fpu (or has an fpu and shouldnt).")
+   }
 
    // if this is for HFPU units, we don't need a memory unit (or other integer units)..  -- Jecy
-   require (exe_units.map(_.is_mem_unit).reduce(_|_) || hfpu, "Datapath is missing a memory unit.")
-   require (exe_units.map(_.has_mul).reduce(_|_) || hfpu, "Datapath is missing a multiplier.")
-   require (exe_units.map(_.has_div).reduce(_|_) || hfpu, "Datapath is missing a divider.")
-   require (exe_units.map(_.has_hfpu).reduce(_|_) == usingHFPU || !hfpu, "Datapath is missing a hfpu (or has an hfpu and shouldnt).")
+   if(hfpu){ // Only hfpu go through this path
+      require (exe_units.map(_.is_mem_unit).reduce(_|_) || hfpu, "Datapath is missing a memory unit.")
+      require (exe_units.map(_.has_mul).reduce(_|_) || hfpu, "Datapath is missing a multiplier.")
+      require (exe_units.map(_.has_div).reduce(_|_) || hfpu, "Datapath is missing a divider.")
+      require (exe_units.map(_.has_hfpu).reduce(_|_) == usingHFPU || !hfpu, "Datapath is missing a hfpu (or has an hfpu and shouldnt).")
+   }
 
    val num_rf_read_ports = exe_units.map(_.num_rf_read_ports).reduce[Int](_+_)
    val num_rf_write_ports = exe_units.map(_.num_rf_write_ports).reduce[Int](_+_)
