@@ -44,6 +44,7 @@ case class BoomCoreParams(
    gshare: Option[GShareParameters] = None,
    gskew: Option[GSkewParameters] = None,
    intToFpLatency: Int = 2,
+   intToHfpLatency: Int = 2, // Jecy
    imulLatency: Int = 3,
    fetchLatency: Int = 3,
    renameLatency: Int = 2,
@@ -109,6 +110,7 @@ trait HasBoomCoreParameters extends tile.HasCoreParameters
    require (sfmaLatency == dfmaLatency)
 
    val intToFpLatency = boomParams.intToFpLatency
+   val intToHfpLatency = boomParams.intToHfpLatency // Jecy
 
    val fetchLatency = boomParams.fetchLatency // how many cycles does fetch occupy?
    require (fetchLatency == 3) // do not currently support changing this
