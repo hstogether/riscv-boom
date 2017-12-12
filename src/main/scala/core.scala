@@ -910,7 +910,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
          val data = resp.bits.data
          // TODO: fixd me!
          // Jecy
-         if (eu.hasFFlags || (eu.is_mem_unit && (usingFPU || usingHFPU))
+         if (eu.hasFFlags || (eu.is_mem_unit && (usingFPU || usingHFPU)))
          {
             if (eu.hasFFlags)
             {

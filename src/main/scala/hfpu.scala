@@ -134,7 +134,7 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
 
 
    val hfma = Module(new tile.FPUFMAPipe(latency = hfpu_latency, expWidth = 5, sigWidth = 11))
-   hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && req.type === Bits(2)
+   hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && req.typ === Bits(2)
    hfma.io.in.bits := req
 
 
