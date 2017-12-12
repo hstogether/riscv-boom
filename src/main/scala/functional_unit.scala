@@ -54,7 +54,9 @@ class SupportedFuncUnits(
    val csr: Boolean  = false,
    val fdiv: Boolean = false,
    val ifpu: Boolean = false,
-   val hfpu: Boolean = false) // Jecy
+   val hfpu: Boolean = false,
+   val hfdiv: Boolean= false,
+   val hfpiu: Boolean= false) // Jecy
 {
 }
 

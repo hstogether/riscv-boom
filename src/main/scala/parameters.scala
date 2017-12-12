@@ -82,7 +82,7 @@ trait HasBoomCoreParameters extends tile.HasCoreParameters
 
    val numIntPhysRegs   = boomParams.numIntPhysRegisters // size of the integer physical register file
    val numFpPhysRegs    = boomParams.numFpPhysRegisters  // size of the floating point physical register file
-   val numHfpPysRegs    = boomParams.numHfpPhysRegisters  // size of the half-precision floating-point physical register file --Jecy
+   val numHfpPhysRegs    = boomParams.numHfpPhysRegisters  // size of the half-precision floating-point physical register file --Jecy
 
 
    val enableFetchBufferFlowThrough = boomParams.enableFetchBufferFlowThrough
@@ -93,7 +93,8 @@ trait HasBoomCoreParameters extends tile.HasCoreParameters
 
    val mulDivParams = rocketParams.mulDiv.getOrElse(MulDivParams())
 
-   val usingHFPU = boomParams.enableHFPU // Jecy add usingHFP singnel
+   //TODO: remove usingHFPU from rocket
+   //val usingHFPU = boomParams.enableHFPU // Jecy add usingHFP singnel
    val usingHFDivSqrt = boomParams.enableHFDivSqrt // disable HFDivSqrt -- Jecy
 
    //************************************

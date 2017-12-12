@@ -103,7 +103,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
                                  DECODE_WIDTH,
                                  NUM_ROB_ENTRIES,
                                  num_irf_write_ports + fp_pipeline.io.wakeups.length + hfp_pipeline.io.wakeups.length, // Jecy
-                                 exe_units.num_fpu_ports + num_hfpu_ports + fp_pipeline.io.wakeups.length + hfp_pipeline.io.wakeups.length))  // Jecy
+                                 exe_units.num_fpu_ports + exe_units.num_hfpu_ports + fp_pipeline.io.wakeups.length + hfp_pipeline.io.wakeups.length))  // Jecy
    // Used to wakeup registers in rename and issue. ROB needs to listen to something else.
    val int_wakeups      = Wire(Vec(num_wakeup_ports, Valid(new ExeUnitResp(xLen))))
 
@@ -174,7 +174,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    println("   Load/Store Unit Size  : " + NUM_LSU_ENTRIES + "/" + NUM_LSU_ENTRIES)
    println("   Num Int Phys Registers: " + numIntPhysRegs)
    println("   Num FP  Phys Registers: " + numFpPhysRegs)
-   println("   Num HFP Phys Registers: " + numHfPPhysRegs)
+   println("   Num HFP Phys Registers: " + numHfpPhysRegs)
    println("   Max Branch Count      : " + MAX_BR_COUNT)
    println("   BTB Size              : " +
       (if (enableBTB) ("" + boomParams.btb.nSets * boomParams.btb.nWays + " entries (" +

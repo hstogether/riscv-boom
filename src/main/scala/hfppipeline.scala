@@ -45,7 +45,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
       val wakeups          = Vec(num_wakeup_ports, Valid(new ExeUnitResp(hfLen+1)))
       val wb_valids        = Vec(num_wakeup_ports, Bool()).asInput
-      val wb_pdsts         = Vec(num_wakeup_ports, UInt(width=fp_preg_sz)).asInput
+      val wb_pdsts         = Vec(num_wakeup_ports, UInt(width=hfp_preg_sz)).asInput
 
       //TODO -- hook up commit log stuff.
       val debug_tsc_reg    = UInt(INPUT, xLen)
@@ -188,7 +188,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       val hdata = hfregister_read.io.exe_reqs(w).bits.rs2_data
 
       val unrec_h = hardfloat.fNFromRecFN(5, 11, hdata)
-      val unrec_out = Cat(Fill(48, unrec_s(15)), unrec_h)
+      val unrec_out = Cat(Fill(48, unrec_h(15)), unrec_h)
 
       io.tosdq.bits.data := unrec_out
    }

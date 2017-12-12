@@ -698,13 +698,13 @@ class LoadStoreUnit(pl_width: Int)(implicit p: Parameters, edge: uncore.tilelink
    val stdf_clr_bsy_robidx = RegEnable(mem_uop_stdf.rob_idx, mem_fired_stdf)
    val stdf_clr_bsy_brmask = RegEnable(GetNewBrMask(io.brinfo, mem_uop_stdf), mem_fired_stdf)
    val stdhf_clr_bsy_robidx = RegEnable(mem_uop_stdhf.rob_idx, mem_fired_stdhf) // Jecy
-   val stdhf_clr_bsy_brmask = REgEnable(GetNewBrMask(io.brinfo,mem_uop_stdhf), mem_fired_stdhf) // Jecy
+   val stdhf_clr_bsy_brmask = RegEnable(GetNewBrMask(io.brinfo,mem_uop_stdhf), mem_fired_stdhf) // Jecy
 
    io.lsu_clr_bsy_valid(0)   := clr_bsy_valid && !io.exception && !IsKilledByBranch(io.brinfo, clr_bsy_brmask)
    io.lsu_clr_bsy_rob_idx(0) := clr_bsy_robidx
    io.lsu_clr_bsy_valid(1)   := stdf_clr_bsy_valid && !io.exception && !IsKilledByBranch(io.brinfo, stdf_clr_bsy_brmask)
    io.lsu_clr_bsy_rob_idx(1) := stdf_clr_bsy_robidx
-   io.lsu_clr_bsy_valid(2)   := stdhf_clr_bsy_valid && !io.exception && !IsKilledByBranch(io.brionfo, stdhf_clr_bsy_brmask) // Jecy
+   io.lsu_clr_bsy_valid(2)   := stdhf_clr_bsy_valid && !io.exception && !IsKilledByBranch(io.brinfo, stdhf_clr_bsy_brmask) // Jecy
    io.lsu_clr_bsy_rob_idx(2) := stdhf_clr_bsy_robidx // Jecy
 
    //-------------------------------------------------------------
