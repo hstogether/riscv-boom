@@ -92,6 +92,7 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
                             , val has_hfpu      : Boolean       = false // Jecy
                             , val has_hfpiu     : Boolean       = false // Jecy
                             , val has_hfdiv     : Boolean       = false // Jecy
+                            , val has_ihfpu     : Boolean       = false // Jecy
                             )(implicit p: Parameters) extends BoomModule()(p)
 {
    val io = IO(new ExecutionUnitIO(num_rf_read_ports, num_rf_write_ports
@@ -675,7 +676,7 @@ class IntToFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
 
 // TODO: Modify to work -- Jecy
 class IntToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
-   has_ifpu = true,
+   has_ihfpu = true,
    num_rf_read_ports = 2,
    num_rf_write_ports = 1,
    num_bypass_stages = 0,
@@ -685,23 +686,23 @@ class IntToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
    uses_iss_unit = false)
 {
    println ("     ExeUnit--")
-   println ("       - IntToFP")
+   println ("       - IntToHFP")
    val busy = Wire(init=Bool(false))
-   io.fu_types := Mux(!busy, FU_I2F, Bits(0))
+   io.fu_types := Mux(!busy, FU_I2HF, Bits(0))
    io.resp(0).bits.writesToIRF = false
 
-   val ifpu = Module(new IntToFPUnit())
-   ifpu.io.req <> io.req
-   ifpu.io.fcsr_rm := io.fcsr_rm
-   ifpu.io.brinfo <> io.brinfo
-   io.bypass <> ifpu.io.bypass
+   val ihfpu = Module(new IntToHFPUnit())
+   ihfpu.io.req <> io.req
+   ihfpu.io.fcsr_rm := io.fcsr_rm
+   ihfpu.io.brinfo <> io.brinfo
+   io.bypass <> ihfpu.io.bypass
 
    // buffer up results since we share write-port on integer regfile.
-   val queue = Module(new QueueForMicroOpWithData(entries = p(BoomKey).intToFpLatency + 3, data_width)) // TODO being overly conservative
-   queue.io.enq.valid       := ifpu.io.resp.valid
-   queue.io.enq.bits.uop    := ifpu.io.resp.bits.uop
-   queue.io.enq.bits.data   := ifpu.io.resp.bits.data
-   queue.io.enq.bits.fflags := ifpu.io.resp.bits.fflags
+   val queue = Module(new QueueForMicroOpWithData(entries = p(BoomKey).intToHfpLatency + 3, data_width)) // TODO being overly conservative
+   queue.io.enq.valid       := ihfpu.io.resp.valid
+   queue.io.enq.bits.uop    := ihfpu.io.resp.bits.uop
+   queue.io.enq.bits.data   := ihfpu.io.resp.bits.data
+   queue.io.enq.bits.fflags := ihfpu.io.resp.bits.fflags
    queue.io.brinfo := io.brinfo
    queue.io.flush := io.req.bits.kill
 
