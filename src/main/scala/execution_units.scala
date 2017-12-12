@@ -140,7 +140,7 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
                                              has_hfpiu = false)) //(w==0))) -- Jecy
       }
 
-      exe_units += Module(new IntToFPExeUnit()) // TODO: Modify to IntoHFPExeUnit() -- Jecy
+      exe_units += Module(new IntToHFPExeUnit()) // Jecy
    }
 
 
