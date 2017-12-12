@@ -28,7 +28,7 @@ import uncore.constants.MemoryOpConstants._
 object FUConstants
 {
    // bit mask, since a given execution pipeline may support multiple functional units
-   val FUC_SZ = 11 // for 2014 -- Jecy
+   val FUC_SZ = 13 // for 4096 -- Jecy
    val FU_X   = BitPat.dontCare(FUC_SZ)
    val FU_ALU = UInt(  1, FUC_SZ)
    val FU_BRU = UInt(  2, FUC_SZ)
@@ -41,6 +41,8 @@ object FUConstants
    val FU_I2F = UInt(256, FUC_SZ)
    val FU_F2I = UInt(512, FUC_SZ)
    val FU_HFPU= UInt(1024,FUC_SZ) // Jecy
+   val FU_I2HF= UInt(2048,FUC_SZ) // Jecy
+   val FU_HF2I= UInt(4096,FUC_SZ) // Jecy
 }
 import FUConstants._
 
@@ -729,6 +731,7 @@ class IntToFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
 }
 
 // Jecy 20171130
+// TODO: FIXEDME
 class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    num_stages = p(BoomKey).intToFpLatency, // TODO: need to Fixed Jecy
    num_bypass_stages = 0,
