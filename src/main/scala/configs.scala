@@ -24,7 +24,7 @@ class DefaultBoomConfig extends Config((site, here, up) => {
          fWidth = 2,
          useCompressed = false,
          nPerfCounters = 29,
-         nPerfEvents = 37,
+         nPerfEvents = 39, // Add 2 hfp enents -- Jecy
          perfIncWidth = 3, // driven by issue ports, as set in BoomCoreParams.issueParams
          fpu = Some(tile.FPUParams(sfmaLatency=4, dfmaLatency=4, divSqrt=true)),
          hfpu = Some(tile.HFPUParams(hfmaLatency=4, divSqrt=false))),
