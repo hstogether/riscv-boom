@@ -108,7 +108,7 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
    def usesFRF       : Boolean = (has_fpu || has_fdiv || has_hfpu) && !(has_alu || has_mul)
    def usesIRF       : Boolean = !(has_fpu || has_fdiv || has_hfpu) && (has_alu || has_mul || is_mem_unit || has_ifpu)
 
-   require ((has_fpu || has_fdiv || has_hfpu || has_hfdiv || has_ihfpu) ^ (has_alu || has_mul || is_mem_unit || has_ifpu), // Is ihfpu a HFP unit? -- Jecy
+   require ((has_fpu || has_fdiv || has_hfpu || has_hfdiv || has_ihfpu) ^ (has_alu || has_mul || is_mem_unit || has_ifpu),
       "[execute] we no longer support mixing FP and Integer functional units in the same exe unit."
       +has_fpu+","+has_fdiv+","+has_hfpu+","+has_hfdiv+","+has_alu+","+has_mul+","+is_mem_unit+","+has_ifpu+"\n")
 
@@ -464,7 +464,8 @@ class FPUExeUnit(
 class HFPUExeUnit(
    has_hfpu  : Boolean = true,
    has_hfdiv : Boolean = false,
-   has_hfpiu : Boolean = false
+   has_hfpiu : Boolean = false,
+   has_ihfpu : Boolean = false
    )
    (implicit p: Parameters)
    extends ExecutionUnit(
@@ -476,22 +477,24 @@ class HFPUExeUnit(
       has_alu  = false,
       has_hfpu  = has_hfpu,
       has_hfdiv = has_hfdiv,
-      has_hfpiu = has_hfpiu)(p)
+      has_hfpiu = has_hfpiu,
+      has_ihfpu = has_ihfpu)(p)
 {
    println ("     ExeUnit--")
    if (has_hfpu) println ("       - HFPU (Latency: " + hfmaLatency + ")")
    if (has_hfdiv) println ("       - HFDiv/HFSqrt")
    if (has_hfpiu) println ("       - HFPIU (writes to Integer RF)")
+   if (has_ihfpu) prientln("       - IHFPU (wirites from Integer RF") // ??? -- Jecy
 
-   val fdiv_busy = Wire(init=Bool(false))
-   val fpiu_busy = Wire(init=Bool(false))
+   val hfdiv_busy = Wire(init=Bool(false))
+   val hfpiu_busy = Wire(init=Bool(false))
 
    // The Functional Units --------------------
    val fu_units = ArrayBuffer[FunctionalUnit]()
 
    io.fu_types := Mux(Bool(has_hfpu), FU_HFPU, Bits(0)) |
-                  Mux(!hfdiv_busy && Bool(has_hfdiv), FU_HFDV, Bits(0)) | // TODO:    FU_FDV -> FU_HFDV  -- Jecy
-                  Mux(!hfpiu_busy && Bool(has_hfpiu), FU_HF2I, Bits(0))   // TODO:    FU_F2I -> FU_HF2I  -- Jecy
+                  Mux(!hfdiv_busy && Bool(has_hfdiv), FU_HFDV, Bits(0)) |
+                  Mux(!hfpiu_busy && Bool(has_hfpiu), FU_HF2I, Bits(0))
 
 
    io.resp(0).bits.writesToIRF = false
@@ -505,9 +508,7 @@ class HFPUExeUnit(
    if (has_hfpu)
    {
       hfpu = Module(new HFPUUnit())
-      hfpu.io.req.valid           := io.req.valid &&
-                                    (io.req.bits.uop.fu_code_is(FU_HFPU) ||
-                                    io.req.bits.uop.fu_code_is(FU_F2I)) // TODO: move to using a separate unit -- Jecy
+      hfpu.io.req.valid           := io.req.valid && io.req.bits.uop.fu_code_is(FU_HFPU)
       hfpu.io.req.bits.uop        := io.req.bits.uop
       hfpu.io.req.bits.rs1_data   := io.req.bits.rs1_data
       hfpu.io.req.bits.rs2_data   := io.req.bits.rs2_data
@@ -515,11 +516,32 @@ class HFPUExeUnit(
       hfpu.io.req.bits.kill       := io.req.bits.kill
       hfpu.io.fcsr_rm             := io.fcsr_rm
       hfpu.io.brinfo <> io.brinfo
+
       hfpu_resp_val := hfpu.io.resp.valid
       hfpu_resp_fflags := hfpu.io.resp.bits.fflags
       fu_units += hfpu
    }
 
+   // IntToHFP Unit ---------------------------
+   val ihfpu: IntToHFPUnit = null
+   val ihfpu_resp_data = Wire(Bits(width=65))
+   val ihfpu_resp_fflags = Wire(new ValidIO(new FFlagsResp()))
+   ihfpu_resp_fflags.valid := Bool(false)
+   if (has_ihfpu)
+   {
+       ihfpu = Module(new IntToHFPUnit())
+       ihfpu.io.req.valid         := io.req.valid && io.req.bits.uop.fu_code_is(FU_I2HF)
+       ihfpu.io.req.bits.uop      := io.req.bits.uop
+       ihfpu.io.req.bits.rs1_data := io.req.bits.rs1_data
+       ihfpu.io.req.bits.rs2_data := io.req.bits.rs2_data
+       ihfpu.io.fcsr_rm           := io.fcsr_rm
+       ihfpu.io.brinfo <> io.brinfo // ??? Useless
+
+       ihfpu_resp_data:= ihfpu.io.resp.bits.data
+       ihfpu_resp_fflags:= ihfpu.io.resp.bits.fflags
+
+       fu_units += ihfpu
+   }
 
    // HFDiv/HFSqrt Unit -----------------------
    // Now we don't suport HFDiv/FHSqrt. -- Jecy
@@ -532,7 +554,7 @@ class HFPUExeUnit(
    if (has_hfdiv)
    {
       fdivsqrt = Module(new FDivSqrtUnit())
-      fdivsqrt.io.req.valid         := io.req.valid && io.req.bits.uop.fu_code_is(FU_FDV) // TODO: FU_FDV -> FU_HFDV
+      fdivsqrt.io.req.valid         := io.req.valid && io.req.bits.uop.fu_code_is(FU_HFDV)
       fdivsqrt.io.req.bits.uop      := io.req.bits.uop
       fdivsqrt.io.req.bits.rs1_data := io.req.bits.rs1_data
       fdivsqrt.io.req.bits.rs2_data := io.req.bits.rs2_data
@@ -543,7 +565,7 @@ class HFPUExeUnit(
       // share write port with the pipelined units
       fdivsqrt.io.resp.ready := !(fu_units.map(_.io.resp.valid).reduce(_|_)) // TODO PERF will get blocked by fpiu.
 
-      fdiv_busy := !fdivsqrt.io.req.ready || (io.req.valid && io.req.bits.uop.fu_code_is(FU_FDV))
+      fdiv_busy := !fdivsqrt.io.req.ready || (io.req.valid && io.req.bits.uop.fu_code_is(FU_HFDV))
 
       fdiv_resp_val := fdivsqrt.io.resp.valid
       fdiv_resp_uop := fdivsqrt.io.resp.bits.uop
@@ -556,11 +578,11 @@ class HFPUExeUnit(
    // Outputs (Write Port #0)  ---------------
 
    io.resp(0).valid    := fu_units.map(_.io.resp.valid).reduce(_|_) &&
-                          !(hfpu.io.resp.valid && hfpu.io.resp.bits.uop.fu_code_is(FU_F2I))
+                          !(hfpu.io.resp.valid && hfpu.io.resp.bits.uop.fu_code_is(FU_HF2I))
    io.resp(0).bits.uop := new MicroOp().fromBits(
                            PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.uop.asUInt))))
    io.resp(0).bits.data:= PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.data.asUInt))).asUInt
-   io.resp(0).bits.fflags := Mux(hfpu_resp_val, hfpu_resp_fflags, fdiv_resp_fflags)
+   io.resp(0).bits.fflags := Mux(hfpu_resp_val, hfpu_resp_fflags, Mux(fdiv_resp_val, fdiv_resp_fflags, hfpu_resp_fflags))
 
    // Outputs (Write Port #1) -- FpToInt Queuing Unit -----------------------
 
