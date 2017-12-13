@@ -194,7 +194,6 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    }
    require (exe_units.num_total_bypass_ports == 0)
 
-   // 需要修改ifpu_unit --Jecy
    exe_units.ihfpu_unit.io.req <> io.fromint
 
    //-------------------------------------------------------------

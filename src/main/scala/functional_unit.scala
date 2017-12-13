@@ -734,7 +734,7 @@ class IntToFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
 // Jecy 20171130
 // TODO: FIXEDME
 class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
-   num_stages = p(BoomKey).intToFpLatency, // TODO: need to Fixed Jecy
+   num_stages = p(BoomKey).intToHFpLatency, // TODO: need to Fixed Jecy
    num_bypass_stages = 0,
    earliest_bypass_stage = 0,
    data_width = 65)(p)
@@ -757,14 +757,14 @@ class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    assert (!(io.req.valid && !fp_ctrl.fromint),
       "[func] Only support fromInt micro-ops.")
 
-   val ifpu = Module(new tile.IntToHFP(intToFpLatency))
-   ifpu.io.in.valid := io.req.valid
-   ifpu.io.in.bits := req
+   val ihfpu = Module(new tile.IntToHFP(intToHFpLatency))
+   ihfpu.io.in.valid := io.req.valid
+   ihfpu.io.in.bits := req
 
-   io.resp.bits.data              := ifpu.io.out.bits.data
-   io.resp.bits.fflags.valid      := ifpu.io.out.valid
+   io.resp.bits.data              := ihfpu.io.out.bits.data
+   io.resp.bits.fflags.valid      := ihfpu.io.out.valid
    io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
-   io.resp.bits.fflags.bits.flags := ifpu.io.out.bits.exc
+   io.resp.bits.fflags.bits.flags := ihfpu.io.out.bits.exc
 }
 
 // Iterative/unpipelined, can only hold a single MicroOp at a time TODO allow up to N micro-ops simultaneously.
