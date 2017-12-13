@@ -195,14 +195,14 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    require (exe_units.num_total_bypass_ports == 0)
 
    // 需要修改ifpu_unit --Jecy
-   exe_units.ifpu_unit.io.req <> io.fromint
+   exe_units.ihfpu_unit.io.req <> io.fromint
 
    //-------------------------------------------------------------
    // **** Writeback Stage ****
    //-------------------------------------------------------------
 
    val ll_wbarb = Module(new Arbiter(new ExeUnitResp(hfLen+1), 2))
-   val ifpu_resp = exe_units.ifpu_unit.io.resp(0)
+   val ihfpu_resp = exe_units.ihfpu_unit.io.resp(0)
 
 
    // Hookup load writeback -- and recode FP values.
@@ -212,7 +212,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    val hfp_load_data_recoded = Cat(SInt(-1, 48), rec_h)
    ll_wbarb.io.in(0).bits.data := hfp_load_data_recoded
 
-   ll_wbarb.io.in(1) <> ifpu_resp
+   ll_wbarb.io.in(1) <> ihfpu_resp
    if (regreadLatency > 0) {
       // Cut up critical path by delaying the write by a cycle.
       // Wakeup signal is sent on cycle S0, write is now delayed until end of S1,
@@ -224,7 +224,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    }
 
    assert (ll_wbarb.io.in(0).ready) // never backpressure the memory unit.
-   when (ifpu_resp.valid) { assert (ifpu_resp.bits.uop.ctrl.rf_wen && ifpu_resp.bits.uop.dst_rtype === RT_FLT) }
+   when (ihfpu_resp.valid) { assert (ihfpu_resp.bits.uop.ctrl.rf_wen && ihfpu_resp.bits.uop.dst_rtype === RT_FLT) }
 
 
    var w_cnt = 1
@@ -240,7 +240,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
             assert(!(wbresp.valid && !toint))
             assert(!toint_found) // only support one toint connector
             toint_found = true
-         } else if (eu.has_ifpu) {
+         } else if (eu.has_ihfpu) {
             // share with ll unit
          } else {
             assert (!(wbresp.valid && toint))
@@ -263,7 +263,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
             !toint),
             "[fppipeline] A writeback is being attempted to the FP RF with dst != FP type.")
 
-         if (!wbresp.bits.writesToIRF && !eu.has_ifpu) w_cnt += 1
+         if (!wbresp.bits.writesToIRF && !eu.has_ihfpu) w_cnt += 1
       }
    }
    require (w_cnt == hfregfile.io.write_ports.length)
@@ -285,7 +285,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       {
          val wb_uop = exe_resp.bits.uop
 
-         if (!exe_resp.bits.writesToIRF && !eu.has_ifpu) {
+         if (!exe_resp.bits.writesToIRF && !eu.has_ihfpu) {
             val wport = io.wakeups(w_cnt)
             wport <> exe_resp
             wport.valid := exe_resp.valid && wb_uop.dst_rtype === RT_FLT
