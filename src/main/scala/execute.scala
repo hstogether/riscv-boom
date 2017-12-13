@@ -106,7 +106,7 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
    def isBypassable  : Boolean = bypassable
    def hasFFlags     : Boolean = has_fpu || has_fdiv || has_hfpu || has_hfdiv // Jecy
    def usesFRF       : Boolean = (has_fpu || has_fdiv || has_hfpu) && !(has_alu || has_mul)
-   def usesIRF       : Boolean = !(has_fpu || has_fdiv || has_hfpu) && (has_alu || has_mul || is_mem_unit || has_ifpu)
+   def usesIRF       : Boolean = !(has_fpu || has_fdiv) && (has_alu || has_mul || is_mem_unit || has_ifpu || has_ihfpu)
 
    require ((has_fpu || has_fdiv || has_hfpu || has_hfdiv || has_ihfpu) ^ (has_alu || has_mul || is_mem_unit || has_ifpu),
       "[execute] we no longer support mixing FP and Integer functional units in the same exe unit."
@@ -469,7 +469,7 @@ class HFPUExeUnit(
    )
    (implicit p: Parameters)
    extends ExecutionUnit(
-      num_rf_read_ports = 3,
+      num_rf_read_ports = 5, // two for ihfpu -- Jecy
       num_rf_write_ports = 2, // one for FRF, oen for IRF
       num_bypass_stages = 0,
       data_width = 65,
@@ -484,7 +484,7 @@ class HFPUExeUnit(
    if (has_hfpu) println ("       - HFPU (Latency: " + hfmaLatency + ")")
    if (has_hfdiv) println ("       - HFDiv/HFSqrt")
    if (has_hfpiu) println ("       - HFPIU (writes to Integer RF)")
-   if (has_ihfpu) prientln("       - IHFPU (wirites from Integer RF") // ??? -- Jecy
+   if (has_ihfpu) println ("       - IHFPU (wirites from Integer RF)") // ??? -- Jecy
 
    val hfdiv_busy = Wire(init=Bool(false))
    val hfpiu_busy = Wire(init=Bool(false))
@@ -523,7 +523,7 @@ class HFPUExeUnit(
    }
 
    // IntToHFP Unit ---------------------------
-   val ihfpu: IntToHFPUnit = null
+   var ihfpu: IntToHFPUnit = null
    val ihfpu_resp_data = Wire(Bits(width=65))
    val ihfpu_resp_fflags = Wire(new ValidIO(new FFlagsResp()))
    ihfpu_resp_fflags.valid := Bool(false)
@@ -545,34 +545,34 @@ class HFPUExeUnit(
 
    // HFDiv/HFSqrt Unit -----------------------
    // Now we don't suport HFDiv/FHSqrt. -- Jecy
-   var fdivsqrt: FDivSqrtUnit = null
-   val fdiv_resp_val = Wire(init=Bool(false))
-   val fdiv_resp_uop = Wire(new MicroOp())
-   val fdiv_resp_data = Wire(Bits(width=65))
-   val fdiv_resp_fflags = Wire(new ValidIO(new FFlagsResp()))
-   fdiv_resp_fflags.valid := Bool(false)
+   var hfdivsqrt: FDivSqrtUnit = null
+   val hfdiv_resp_val = Wire(init=Bool(false))
+   val hfdiv_resp_uop = Wire(new MicroOp())
+   val hfdiv_resp_data = Wire(Bits(width=65))
+   val hfdiv_resp_fflags = Wire(new ValidIO(new FFlagsResp()))
+   hfdiv_resp_fflags.valid := Bool(false)
    if (has_hfdiv)
    {
-      fdivsqrt = Module(new FDivSqrtUnit())
-      fdivsqrt.io.req.valid         := io.req.valid && io.req.bits.uop.fu_code_is(FU_HFDV)
-      fdivsqrt.io.req.bits.uop      := io.req.bits.uop
-      fdivsqrt.io.req.bits.rs1_data := io.req.bits.rs1_data
-      fdivsqrt.io.req.bits.rs2_data := io.req.bits.rs2_data
-      fdivsqrt.io.req.bits.kill     := io.req.bits.kill
-      fdivsqrt.io.fcsr_rm           := io.fcsr_rm
-      fdivsqrt.io.brinfo <> io.brinfo
+      hfdivsqrt = Module(new FDivSqrtUnit())
+      hfdivsqrt.io.req.valid         := io.req.valid && io.req.bits.uop.fu_code_is(FU_HFDV)
+      hfdivsqrt.io.req.bits.uop      := io.req.bits.uop
+      hfdivsqrt.io.req.bits.rs1_data := io.req.bits.rs1_data
+      hfdivsqrt.io.req.bits.rs2_data := io.req.bits.rs2_data
+      hfdivsqrt.io.req.bits.kill     := io.req.bits.kill
+      hfdivsqrt.io.fcsr_rm           := io.fcsr_rm
+      hfdivsqrt.io.brinfo <> io.brinfo
 
       // share write port with the pipelined units
-      fdivsqrt.io.resp.ready := !(fu_units.map(_.io.resp.valid).reduce(_|_)) // TODO PERF will get blocked by fpiu.
+      hfdivsqrt.io.resp.ready := !(fu_units.map(_.io.resp.valid).reduce(_|_)) // TODO PERF will get blocked by fpiu.
 
-      fdiv_busy := !fdivsqrt.io.req.ready || (io.req.valid && io.req.bits.uop.fu_code_is(FU_HFDV))
+      hfdiv_busy := !hfdivsqrt.io.req.ready || (io.req.valid && io.req.bits.uop.fu_code_is(FU_HFDV))
 
-      fdiv_resp_val := fdivsqrt.io.resp.valid
-      fdiv_resp_uop := fdivsqrt.io.resp.bits.uop
-      fdiv_resp_data := fdivsqrt.io.resp.bits.data
-      fdiv_resp_fflags := fdivsqrt.io.resp.bits.fflags
+      hfdiv_resp_val := hfdivsqrt.io.resp.valid
+      hfdiv_resp_uop := hfdivsqrt.io.resp.bits.uop
+      hfdiv_resp_data := hfdivsqrt.io.resp.bits.data
+      hfdiv_resp_fflags := hfdivsqrt.io.resp.bits.fflags
 
-      fu_units += fdivsqrt
+      fu_units += hfdivsqrt
    }
 
    // Outputs (Write Port #0)  ---------------
@@ -582,7 +582,7 @@ class HFPUExeUnit(
    io.resp(0).bits.uop := new MicroOp().fromBits(
                            PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.uop.asUInt))))
    io.resp(0).bits.data:= PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.data.asUInt))).asUInt
-   io.resp(0).bits.fflags := Mux(hfpu_resp_val, hfpu_resp_fflags, Mux(fdiv_resp_val, fdiv_resp_fflags, hfpu_resp_fflags))
+   io.resp(0).bits.fflags := Mux(hfpu_resp_val, hfpu_resp_fflags, Mux(hfdiv_resp_val, hfdiv_resp_fflags, hfpu_resp_fflags))
 
    // Outputs (Write Port #1) -- FpToInt Queuing Unit -----------------------
 
@@ -598,7 +598,7 @@ class HFPUExeUnit(
    queue.io.flush           := io.req.bits.kill
    io.resp(1) <> queue.io.deq
 
-   fpiu_busy := !(queue.io.empty)
+   hfpiu_busy := !(queue.io.empty)
 
    assert (queue.io.enq.ready) // If this backs up, we've miscalculated the size of the queue.
 }
