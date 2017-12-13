@@ -90,6 +90,12 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
       exe_units.find(_.has_ifpu).get
    }
 
+   lazy val ihfpu_unit =
+   {
+      require (exe_units.count(_.has_ihfpu) == 1)
+      exe_units.find(_.has_ihfpu).get
+   }
+
    lazy val br_unit_io =
    {
       require (exe_units.count(_.hasBranchUnit) == 1)
