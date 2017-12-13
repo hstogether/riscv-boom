@@ -104,12 +104,13 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
    def numBypassPorts: Int = num_bypass_stages
    def hasBranchUnit : Boolean = is_branch_unit
    def isBypassable  : Boolean = bypassable
-   def hasFFlags     : Boolean = has_fpu || has_fdiv || has_hfpu
+   def hasFFlags     : Boolean = has_fpu || has_fdiv || has_hfpu || has_hfdiv // Jecy
    def usesFRF       : Boolean = (has_fpu || has_fdiv || has_hfpu) && !(has_alu || has_mul)
    def usesIRF       : Boolean = !(has_fpu || has_fdiv || has_hfpu) && (has_alu || has_mul || is_mem_unit || has_ifpu)
 
-   require ((has_fpu || has_fdiv || has_hfpu) ^ (has_alu || has_mul || is_mem_unit || has_ifpu),
-      "[execute] we no longer support mixing FP and Integer functional units in the same exe unit.")
+   require ((has_fpu || has_fdiv || has_hfpu || has_hfdiv || has_ihfpu) ^ (has_alu || has_mul || is_mem_unit || has_ifpu), // Is ihfpu a HFP unit? -- Jecy
+      "[execute] we no longer support mixing FP and Integer functional units in the same exe unit."
+      +has_fpu+","+has_fdiv+","+has_hfpu+","+has_hfdiv+","+has_alu+","+has_mul+","+is_mem_unit+","+has_ifpu+"\n")
 
    def supportedFuncUnits =
    {
@@ -489,8 +490,8 @@ class HFPUExeUnit(
    val fu_units = ArrayBuffer[FunctionalUnit]()
 
    io.fu_types := Mux(Bool(has_hfpu), FU_HFPU, Bits(0)) |
-                  Mux(!fdiv_busy && Bool(has_hfdiv), FU_FDV, Bits(0)) | // TODO:    FU_FDV -> FU_HFDV  -- Jecy
-                  Mux(!fpiu_busy && Bool(has_hfpiu), FU_F2I, Bits(0))   // TODO:    FU_F2I -> FU_HF2I  -- Jecy
+                  Mux(!hfdiv_busy && Bool(has_hfdiv), FU_HFDV, Bits(0)) | // TODO:    FU_FDV -> FU_HFDV  -- Jecy
+                  Mux(!hfpiu_busy && Bool(has_hfpiu), FU_HF2I, Bits(0))   // TODO:    FU_F2I -> FU_HF2I  -- Jecy
 
 
    io.resp(0).bits.writesToIRF = false

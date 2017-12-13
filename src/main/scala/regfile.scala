@@ -65,7 +65,7 @@ abstract class RegisterFile(
    })
 
    private val rf_cost = (num_read_ports+num_write_ports)*(num_read_ports+2*num_write_ports)
-   private val type_str = if (register_width == fLen+1) "Floating Point" else "Integer"
+   private val type_str = if (register_width == fLen+1) "Floating Point" else "Integer"  // TODO: Add Half-precision Floating Point -- Jecy
    override def toString: String =
       "\n   ==" + type_str + " Regfile==" +
       "\n   Num RF Read Ports     : " + num_read_ports +
