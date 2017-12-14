@@ -1021,7 +1021,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    // detect pipeline freezes and throw error
    val idle_cycles = util.WideCounter(32)
    when (rob.io.commit.valids.asUInt.orR || reset.toBool) { idle_cycles := 0.U }
-   assert (!(idle_cycles.value(13)), "Pipeline has hung."+"---"+rob.io.commit.valids.asUInt.orR+","+reset.toBool+".")
+   println("---"+rob.io.commit.valids.asUInt.orR+","+reset.toBool+".")
+   assert (!(idle_cycles.value(13)), "Pipeline has hung.")
 
    fp_pipeline.io.debug_tsc_reg := debug_tsc_reg
    hfp_pipeline.io.debug_tsc_reg := debug_tsc_reg // Jecy

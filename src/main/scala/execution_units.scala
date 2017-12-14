@@ -144,8 +144,9 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
          exe_units += Module(new HFPUExeUnit(has_hfpu = true,
                                              has_hfdiv = usingHFDivSqrt && (w==0),
                                              has_hfpiu = (w==0),
-                                             has_ihfpu = true)) // TODO: paramers
+                                             has_ihfpu = false)) // TODO: paramers
       }
+      exe_units += Module(new IntToHFPExeUnit()) // TODO: FIXED ME -- Jecy
    }
 
 

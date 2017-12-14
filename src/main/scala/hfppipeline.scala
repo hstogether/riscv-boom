@@ -79,7 +79,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    // We're playing fast and loose on the number of wakeup and write ports.
    // The -1 is for the F2I port; -1 for I2F port.
    println (exe_units.map(_.num_rf_write_ports).sum)
-   require (exe_units.map(_.num_rf_write_ports).sum-1 + num_ll_ports == num_wakeup_ports)
+   require (exe_units.map(_.num_rf_write_ports).sum-1-1 + num_ll_ports == num_wakeup_ports)
    require (exe_units.withFilter(_.uses_iss_unit).map(e =>
       e.num_rf_write_ports).sum -1 + num_ll_ports == num_wakeup_ports)
 
@@ -223,7 +223,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    }
 
    assert (ll_wbarb.io.in(0).ready) // never backpressure the memory unit.
-   when (ihfpu_resp.valid) { assert (ihfpu_resp.bits.uop.ctrl.rf_wen && ihfpu_resp.bits.uop.dst_rtype === RT_FLT) }
+   when (ihfpu_resp.valid) { assert (ihfpu_resp.bits.uop.ctrl.rf_wen && ihfpu_resp.bits.uop.dst_rtype === RT_FHT) }
 
 
    var w_cnt = 1
@@ -253,14 +253,14 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
          assert (!(wbresp.valid &&
             !wbresp.bits.uop.ctrl.rf_wen &&
-            wbresp.bits.uop.dst_rtype === RT_FLT),
-            "[fppipeline] An FP writeback is being attempted with rf_wen disabled.")
+            wbresp.bits.uop.dst_rtype === RT_FHT),
+            "[fppipeline] An HFP writeback is being attempted with rf_wen disabled.")
 
          assert (!(wbresp.valid &&
             wbresp.bits.uop.ctrl.rf_wen &&
-            wbresp.bits.uop.dst_rtype =/= RT_FLT &&
+            wbresp.bits.uop.dst_rtype =/= RT_FHT &&
             !toint),
-            "[fppipeline] A writeback is being attempted to the FP RF with dst != FP type.")
+            "[fppipeline] A writeback is being attempted to the HFP RF with dst != HFP type.")
 
          if (!wbresp.bits.writesToIRF && !eu.has_ihfpu) w_cnt += 1
       }

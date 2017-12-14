@@ -469,7 +469,7 @@ class HFPUExeUnit(
    )
    (implicit p: Parameters)
    extends ExecutionUnit(
-      num_rf_read_ports = 5, // two for ihfpu -- Jecy
+      num_rf_read_ports = 3,
       num_rf_write_ports = 2, // one for FRF, oen for IRF
       num_bypass_stages = 0,
       data_width = 65,
@@ -545,7 +545,7 @@ class HFPUExeUnit(
 
    // HFDiv/HFSqrt Unit -----------------------
    // Now we don't suport HFDiv/FHSqrt. -- Jecy
-   var hfdivsqrt: FDivSqrtUnit = null
+   var hfdivsqrt: HFDivSqrtUnit = null
    val hfdiv_resp_val = Wire(init=Bool(false))
    val hfdiv_resp_uop = Wire(new MicroOp())
    val hfdiv_resp_data = Wire(Bits(width=65))
@@ -553,7 +553,7 @@ class HFPUExeUnit(
    hfdiv_resp_fflags.valid := Bool(false)
    if (has_hfdiv)
    {
-      hfdivsqrt = Module(new FDivSqrtUnit())
+      hfdivsqrt = Module(new HFDivSqrtUnit())
       hfdivsqrt.io.req.valid         := io.req.valid && io.req.bits.uop.fu_code_is(FU_HFDV)
       hfdivsqrt.io.req.bits.uop      := io.req.bits.uop
       hfdivsqrt.io.req.bits.rs1_data := io.req.bits.rs1_data
@@ -582,7 +582,7 @@ class HFPUExeUnit(
    io.resp(0).bits.uop := new MicroOp().fromBits(
                            PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.uop.asUInt))))
    io.resp(0).bits.data:= PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.data.asUInt))).asUInt
-   io.resp(0).bits.fflags := Mux(hfpu_resp_val, hfpu_resp_fflags, Mux(hfdiv_resp_val, hfdiv_resp_fflags, hfpu_resp_fflags))
+   io.resp(0).bits.fflags := Mux(hfpu_resp_val, hfpu_resp_fflags, Mux(hfdiv_resp_val, hfdiv_resp_fflags, ihfpu_resp_fflags))
 
    // Outputs (Write Port #1) -- FpToInt Queuing Unit -----------------------
 
