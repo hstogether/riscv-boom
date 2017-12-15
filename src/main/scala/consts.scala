@@ -50,6 +50,7 @@ trait IQType
    val IQT_INT = UInt(0, IQT_SZ)
    val IQT_MEM = UInt(1, IQT_SZ)
    val IQT_FP  = UInt(2, IQT_SZ)
+   val IQT_HFP = UInt(3, IQT_SZ)
 }
 
 trait ScalarOpConstants
@@ -124,10 +125,11 @@ trait ScalarOpConstants
 
 
    // Decode Stage Control Signals
-   val RT_FIX   = UInt(0, 2)
-   val RT_FLT   = UInt(1, 2)
-   val RT_PAS   = UInt(3, 2) // pass-through (pop1 := lrs1, etc)
-   val RT_X     = UInt(2, 2) // not-a-register (but shouldn't get a busy-bit, etc.)
+   val RT_FIX   = UInt(0, 3)
+   val RT_FLT   = UInt(1, 3)
+   val RT_FHT   = UInt(4, 3)
+   val RT_PAS   = UInt(3, 3) // pass-through (pop1 := lrs1, etc)
+   val RT_X     = UInt(2, 3) // not-a-register (but shouldn't get a busy-bit, etc.)
                              // TODO rename RT_NAR
 
    // Micro-op opcodes
@@ -214,12 +216,19 @@ trait ScalarOpConstants
    val uopFMV_D_X   = UInt(69, UOPC_SZ)
    val uopFMV_X_S   = UInt(70, UOPC_SZ)
    val uopFMV_X_D   = UInt(71, UOPC_SZ)
+   val uopFMV_H_X   = UInt(123,UOPC_SZ)
+   val uopFMV_X_H   = UInt(146,UOPC_SZ)
 
    val uopFSGNJ_S   = UInt(72, UOPC_SZ)
    val uopFSGNJ_D   = UInt(73, UOPC_SZ)
+   val uopFSGNJ_H   = UInt(124,UOPC_SZ)
 
    val uopFCVT_S_D  = UInt(74, UOPC_SZ)
    val uopFCVT_D_S  = UInt(75, UOPC_SZ)
+   val uopFCVT_S_H  = UInt(125,UOPC_SZ)
+   val uopFCVT_H_S  = UInt(126,UOPC_SZ)
+   val uopFCVT_D_H  = UInt(144,UOPC_SZ)
+   val uopFCVT_H_D  = UInt(145,UOPC_SZ)
 
    val uopFCVT_S_W  = UInt(76, UOPC_SZ)
    val uopFCVT_S_WU = UInt(77, UOPC_SZ)
@@ -229,6 +238,10 @@ trait ScalarOpConstants
    val uopFCVT_D_WU = UInt(81, UOPC_SZ)
    val uopFCVT_D_L  = UInt(82, UOPC_SZ)
    val uopFCVT_D_LU = UInt(83, UOPC_SZ)
+   val uopFCVT_H_W  = UInt(127,UOPC_SZ)
+   val uopFCVT_H_WU = UInt(128,UOPC_SZ)
+   val uopFCVT_H_L  = UInt(129,UOPC_SZ)
+   val uopFCVT_H_LU = UInt(130,UOPC_SZ)
 
 
    val uopFCVT_W_S  = UInt(84, UOPC_SZ)
@@ -239,6 +252,10 @@ trait ScalarOpConstants
    val uopFCVT_WU_D = UInt(89, UOPC_SZ)
    val uopFCVT_L_D  = UInt(90, UOPC_SZ)
    val uopFCVT_LU_D = UInt(91, UOPC_SZ)
+   val uopFCVT_W_H  = UInt(131,UOPC_SZ)
+   val uopFCVT_WU_H = UInt(132,UOPC_SZ)
+   val uopFCVT_L_H  = UInt(133,UOPC_SZ)
+   val uopFCVT_LU_H = UInt(134,UOPC_SZ)
 
    val uopFEQ_S     = UInt(92, UOPC_SZ)
    val uopFLT_S     = UInt(93, UOPC_SZ)
@@ -246,14 +263,20 @@ trait ScalarOpConstants
    val uopFEQ_D     = UInt(95, UOPC_SZ)
    val uopFLT_D     = UInt(96, UOPC_SZ)
    val uopFLE_D     = UInt(97, UOPC_SZ)
+   val uopFEQ_H     = UInt(135,UOPC_SZ)
+   val uopFLT_H     = UInt(136,UOPC_SZ)
+   val uopFLE_H     = UInt(137,UOPC_SZ)
 
    val uopFCLASS_S  = UInt(98, UOPC_SZ)
    val uopFCLASS_D  = UInt(99, UOPC_SZ)
+   val uopFCLASS_H  = UInt(138,UOPC_SZ)
 
    val uopFMIN_S    = UInt(100,UOPC_SZ)
    val uopFMAX_S    = UInt(101,UOPC_SZ)
    val uopFMIN_D    = UInt(102,UOPC_SZ)
    val uopFMAX_D    = UInt(103,UOPC_SZ)
+   val uopFMIN_H    = UInt(139,UOPC_SZ)
+   val uopFMAX_H    = UInt(140,UOPC_SZ)
 
    val uopFADD_S    = UInt(104,UOPC_SZ)
    val uopFSUB_S    = UInt(105,UOPC_SZ)
@@ -261,6 +284,9 @@ trait ScalarOpConstants
    val uopFADD_D    = UInt(107,UOPC_SZ)
    val uopFSUB_D    = UInt(108,UOPC_SZ)
    val uopFMUL_D    = UInt(109,UOPC_SZ)
+   val uopFADD_H    = UInt(141,UOPC_SZ)
+   val uopFSUB_H    = UInt(142,UOPC_SZ)
+   val uopFMUL_H    = UInt(143,UOPC_SZ)
 
    val uopFMADD_S   = UInt(110,UOPC_SZ)
    val uopFMSUB_S   = UInt(111,UOPC_SZ)
@@ -270,11 +296,17 @@ trait ScalarOpConstants
    val uopFMSUB_D   = UInt(115,UOPC_SZ)
    val uopFNMADD_D  = UInt(116,UOPC_SZ)
    val uopFNMSUB_D  = UInt(117,UOPC_SZ)
+   val uopFMADD_H   = UInt(144,UOPC_SZ)
+   val uopFMSUB_H   = UInt(145,UOPC_SZ)
+   val uopFNMADD_H  = UInt(146,UOPC_SZ)
+   val uopFNMSUB_H  = UInt(147,UOPC_SZ)
 
    val uopFDIV_S    = UInt(118,UOPC_SZ)
    val uopFDIV_D    = UInt(119,UOPC_SZ)
    val uopFSQRT_S   = UInt(120,UOPC_SZ)
    val uopFSQRT_D   = UInt(121,UOPC_SZ)
+   val uopFDIV_H    = UInt(148,UOPC_SZ)
+   val uopFSQRT_H   = UInt(149,UOPC_SZ)
 
    val uopSYSTEM    = UInt(122, UOPC_SZ) // pass uop down the CSR pipeline and let it handle it
 
