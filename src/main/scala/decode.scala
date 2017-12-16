@@ -425,7 +425,7 @@ class DecodeUnit(implicit p: Parameters) extends BoomModule()(p)
    var decode_table = XDecode.table
    if (usingFPU) decode_table ++= FDecode.table
    if (usingFPU && usingFDivSqrt) decode_table ++= FDivSqrtDecode.table
-   if (true) decode_table ++= HFDecode.table // TODO: Add usingHFPU parameter -- Jecy
+   if (usingHFPU) decode_table ++= HFDecode.table
 
    val cs = Wire(new CtrlSigs()).decode(uop.inst, decode_table)
 

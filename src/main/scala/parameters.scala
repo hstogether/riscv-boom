@@ -88,6 +88,8 @@ trait HasBoomCoreParameters extends tile.HasCoreParameters
 
    val mulDivParams = rocketParams.mulDiv.getOrElse(MulDivParams())
 
+   val usingHFDivSqrt = rocketParams.hfpu.isDefined && rocketParams.hfpu.get.divSqrt
+
    //************************************
    // Pipelining
 
