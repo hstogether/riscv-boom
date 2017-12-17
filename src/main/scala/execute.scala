@@ -87,6 +87,7 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
                             , val has_fdiv      : Boolean       = false
                             , val has_ifpu      : Boolean       = false
                             , val has_fpiu      : Boolean       = false
+                            , val has_hfpu      : Boolean       = false
                             )(implicit p: Parameters) extends BoomModule()(p)
 {
    val io = IO(new ExecutionUnitIO(num_rf_read_ports, num_rf_write_ports
@@ -115,7 +116,8 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
          fpu = has_fpu,
          csr = uses_csr_wport,
          fdiv = has_fdiv,
-         ifpu = has_ifpu)
+         ifpu = has_ifpu,
+         hfpu = has_hfpu)
    }
 }
 

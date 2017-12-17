@@ -125,6 +125,7 @@ trait ScalarOpConstants
 
 
    // Decode Stage Control Signals
+   val RT_NAO   = UInt(7, 3)  // not a operand
    val RT_FIX   = UInt(0, 3)
    val RT_FLT   = UInt(1, 3)
    val RT_FHT   = UInt(4, 3)

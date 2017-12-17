@@ -17,10 +17,12 @@ case class BoomCoreParams(
    issueParams: Seq[IssueParams] = Seq(
          IssueParams(issueWidth=1, numEntries=16, iqType=IQT_MEM.litValue),
          IssueParams(issueWidth=2, numEntries=16, iqType=IQT_INT.litValue),
-         IssueParams(issueWidth=1, numEntries=16, iqType=IQT_FP.litValue)),
+         IssueParams(issueWidth=1, numEntries=16, iqType=IQT_FP.litValue),
+         IssueParams(issueWidth=1, numEntries=16, iqType=IQT_HFP.litValue)),
    numLsuEntries: Int = 8,
    numIntPhysRegisters: Int = 96,
    numFpPhysRegisters: Int = 64,
+   numHfpPhysRegisters: Int = 64,
    enableCustomRf: Boolean = false,
    enableCustomRfModel: Boolean = true,
    maxBrCount: Int = 4,
@@ -78,6 +80,7 @@ trait HasBoomCoreParameters extends tile.HasCoreParameters
 
    val numIntPhysRegs   = boomParams.numIntPhysRegisters // size of the integer physical register file
    val numFpPhysRegs    = boomParams.numFpPhysRegisters  // size of the floating point physical register file
+   val numHfpPhysRegs   = boomParams.numHfpPhysRegisters // size of the half-precision floating point physical register file
 
 
    val enableFetchBufferFlowThrough = boomParams.enableFetchBufferFlowThrough

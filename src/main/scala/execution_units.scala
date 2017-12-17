@@ -14,7 +14,7 @@ import config.Parameters
 
 import scala.collection.mutable.ArrayBuffer
 
-class ExecutionUnits(fpu: Boolean = false)(implicit val p: Parameters) extends HasBoomCoreParameters
+class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p: Parameters) extends HasBoomCoreParameters
 {
    val totalIssueWidth = issueParams.map(_.issueWidth).sum
    if (!fpu) {
@@ -116,7 +116,9 @@ class ExecutionUnits(fpu: Boolean = false)(implicit val p: Parameters) extends H
          val is_last = w == (int_width-2)
          exe_units += Module(new ALUExeUnit(has_ifpu = is_last))
       }
-   } else {
+   } else if(hfpu){
+      require (usingHFPU)
+   }else {
       require (usingFPU)
       val fp_width = issueParams.find(_.iqType == IQT_FP.litValue).get.issueWidth
       require (fp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.

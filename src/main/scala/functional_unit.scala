@@ -56,7 +56,8 @@ class SupportedFuncUnits(
    val fpu: Boolean  = false,
    val csr: Boolean  = false,
    val fdiv: Boolean = false,
-   val ifpu: Boolean = false)
+   val ifpu: Boolean = false,
+   val hfpu: Boolean = false)
 {
 }
 
