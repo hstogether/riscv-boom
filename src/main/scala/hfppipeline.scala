@@ -186,9 +186,11 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       io.tosdq.bits.uop := fregister_read.io.exe_reqs(w).bits.uop
       val sdata = fregister_read.io.exe_reqs(w).bits.rs2_data
 
-      val unrec_s = hardfloat.fNFromRecFN(8, 24, sdata)
-      val unrec_d = hardfloat.fNFromRecFN(11, 53, sdata)
-      val unrec_out = Mux(io.tosdq.bits.uop.fp_single, Cat(Fill(32, unrec_s(31)), unrec_s), unrec_d)
+      //val unrec_s = hardfloat.fNFromRecFN(8, 24, sdata)
+      //val unrec_d = hardfloat.fNFromRecFN(11, 53, sdata)
+      val unrec_h = hardfloat.fNFromRecFN(5, 11, sdata)
+      //val unrec_out = Mux(io.tosdq.bits.uop.fp_single, Cat(Fill(32, unrec_s(31)), unrec_s), unrec_d)
+      val unrec_out = Cst(Fill(48, unrec_h(15)),unrec_h)
 
       io.tosdq.bits.data := unrec_out
    }
@@ -207,10 +209,12 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    ll_wbarb.io.in(0) <> io.ll_wport
    val typ = io.ll_wport.bits.uop.mem_typ
    val load_single = typ === rocket.MT_W || typ === rocket.MT_WU
-   val rec_s = hardfloat.recFNFromFN( 8, 24, io.ll_wport.bits.data)
-   val rec_d = hardfloat.recFNFromFN(11, 53, io.ll_wport.bits.data)
-   val fp_load_data_recoded = Mux(load_single, Cat(SInt(-1, 32), rec_s), rec_d)
-   ll_wbarb.io.in(0).bits.data := fp_load_data_recoded
+   //val rec_s = hardfloat.recFNFromFN( 8, 24, io.ll_wport.bits.data)
+   //val rec_d = hardfloat.recFNFromFN(11, 53, io.ll_wport.bits.data)
+   val rec_h = hardfloat.recFNFromFN(5, 11, io.ll_wport.bits.data)
+   //val fp_load_data_recoded = Mux(load_single, Cat(SInt(-1, 32), rec_s), rec_d)
+   val hfp_load_data_recoded = Cat(SInt(-1, 48), rec_h)
+   ll_wbarb.io.in(0).bits.data := hfp_load_data_recoded
 
    ll_wbarb.io.in(1) <> ifpu_resp
    if (regreadLatency > 0) {
@@ -224,7 +228,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    }
 
    assert (ll_wbarb.io.in(0).ready) // never backpressure the memory unit.
-   when (ifpu_resp.valid) { assert (ifpu_resp.bits.uop.ctrl.rf_wen && ifpu_resp.bits.uop.dst_rtype === RT_FLT) }
+   when (ifpu_resp.valid) { assert (ifpu_resp.bits.uop.ctrl.rf_wen && ifpu_resp.bits.uop.dst_rtype === RT_FHT) }
 
 
    var w_cnt = 1
