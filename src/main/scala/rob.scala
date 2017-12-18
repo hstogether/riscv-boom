@@ -187,13 +187,13 @@ class Rob(width: Int,
                                    // around, thus the banks must have equal
                                    // numbers of items.
 
-   println("    Machine Width  : " + width); require (isPow2(width))
-   println("    Rob Entries    : " + num_rob_entries)
-   println("    Rob Rows       : " + num_rob_rows)
-   println("    Rob Row size   : " + log2Up(num_rob_rows))
-   println("    log2UP(width)  : " + log2Up(width))
-   println("    log2Ceil(width): " + log2Ceil(width))
-   println("    FPU FFlag Ports: " + num_fpu_ports)
+   println("    Machine Width       : " + width); require (isPow2(width))
+   println("    Rob Entries         : " + num_rob_entries)
+   println("    Rob Rows            : " + num_rob_rows)
+   println("    Rob Row size        : " + log2Up(num_rob_rows))
+   println("    log2UP(width)       : " + log2Up(width))
+   println("    log2Ceil(width)     : " + log2Ceil(width))
+   println("    FPU/HFPU FFlag Ports: " + num_fpu_ports)
 
    val s_reset :: s_normal :: s_rollback :: s_wait_till_empty :: Nil = Enum(UInt(),4)
    val rob_state = Reg(init = s_reset)

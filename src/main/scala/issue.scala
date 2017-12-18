@@ -104,6 +104,7 @@ abstract class IssueUnit(
       val typ_str = if (iqType == IQT_INT.litValue) "int"
                     else if (iqType == IQT_MEM.litValue) "mem"
                     else if (iqType == IQT_FP.litValue) " fp"
+                    else if (iqType == IQT_HFP.litValue) "hfp"
                     else "unknown"
       for (i <- 0 until num_issue_slots)
       {
@@ -123,7 +124,8 @@ abstract class IssueUnit(
             , Mux(issue_slots(i).uop.dst_rtype === RT_FIX, Str("X"),
               Mux(issue_slots(i).uop.dst_rtype === RT_X, Str("-"),
               Mux(issue_slots(i).uop.dst_rtype === RT_FLT, Str("f"),
-              Mux(issue_slots(i).uop.dst_rtype === RT_PAS, Str("C"), Str("?")))))
+              Mux(issue_slots(i).uop.dst_rtype === RT_FHT, Str("hf"),
+              Mux(issue_slots(i).uop.dst_rtype === RT_PAS, Str("C"), Str("?"))))))
             , issue_slots(i).uop.inst
             , issue_slots(i).uop.pc(31,0)
             , issue_slots(i).uop.uopc

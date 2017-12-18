@@ -60,11 +60,11 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    if (usingFPU) {
       fp_pipeline       = Module(new FpPipeline())
    }
-   /*
+   
    if (usingHFPU) {
       hfp_pipeline      = Module(new HfpPipeline())
    }
-   */
+   
 
    val num_irf_write_ports = exe_units.map(_.num_rf_write_ports).sum
    val num_fast_wakeup_ports = exe_units.count(_.isBypassable)
@@ -74,7 +74,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    val dec_serializer   = Module(new FetchSerializerNtoM)
    val decode_units     = for (w <- 0 until DECODE_WIDTH) yield { val d = Module(new DecodeUnit); d }
    val dec_brmask_logic = Module(new BranchMaskGenerationLogic(DECODE_WIDTH))
-   val rename_stage     = Module(new RenameStage(DECODE_WIDTH, num_wakeup_ports, fp_pipeline.io.wakeups.length,fp_pipeline.io.wakeups.length))
+   val rename_stage     = Module(new RenameStage(DECODE_WIDTH, num_wakeup_ports, fp_pipeline.io.wakeups.length, hfp_pipeline.io.wakeups.length))
    val issue_units      = new boom.IssueUnits(num_wakeup_ports)
    val iregfile         = if (regreadLatency == 1 && enableCustomRf) {
                               Module(new RegisterFileSeqCustomArray(numIntPhysRegs,
@@ -89,7 +89,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
                                  xLen,
                                  exe_units.bypassable_write_port_mask))
                           }
-   val ll_wbarb         = Module(new Arbiter(new ExeUnitResp(xLen), 2))
+   val ll_wbarb         = Module(new Arbiter(new ExeUnitResp(xLen), 3))
    val iregister_read   = Module(new RegisterRead(
                                  issue_units.map(_.issue_width).sum,
                                  exe_units.withFilter(_.usesIRF).map(_.supportedFuncUnits),
@@ -103,8 +103,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    val rob              = Module(new Rob(
                                  DECODE_WIDTH,
                                  NUM_ROB_ENTRIES,
-                                 num_irf_write_ports + fp_pipeline.io.wakeups.length,
-                                 exe_units.num_fpu_ports + fp_pipeline.io.wakeups.length))
+                                 num_irf_write_ports + fp_pipeline.io.wakeups.length + hfp_pipeline.io.wakeups.length,
+                                 exe_units.num_fpu_ports + fp_pipeline.io.wakeups.length + hfp_pipeline.io.wakeups.length))
    // Used to wakeup registers in rename and issue. ROB needs to listen to something else.
    val int_wakeups      = Wire(Vec(num_wakeup_ports, Valid(new ExeUnitResp(xLen))))
 
@@ -187,6 +187,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    println("   Num Bypass Ports      : " + exe_units.num_total_bypass_ports)
 
    print(fp_pipeline)
+   print(hfp_pipeline)
 
    println("\n   DCache Ways           : " + dcacheParams.nWays)
    println("   DCache Sets           : " + dcacheParams.nSets)
@@ -414,7 +415,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    //-------------------------------------------------------------
 
    // TODO for now, assume worst-case all instructions will dispatch towards one issue unit.
-   val dis_readys = issue_units.map(_.io.dis_readys.asUInt).reduce(_&_) & fp_pipeline.io.dis_readys.asUInt
+   val dis_readys = issue_units.map(_.io.dis_readys.asUInt).reduce(_&_) & fp_pipeline.io.dis_readys.asUInt & hfp_pipeline.io.dis_readys.asUInt
+
    rename_stage.io.dis_inst_can_proceed := dis_readys.toBools
    rename_stage.io.ren_pred_info := Vec(dec_fbundle.uops.map(_.br_prediction))
 
@@ -481,6 +483,10 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    {
       renport <> fpport
    }
+   for ((renport, hfpport) <- rename_stage.io.hfp_wakeups zip hfp_pipeline.io.wakeups)
+   {
+      renport <> hfpport
+   }
 
    rename_stage.io.com_valids := rob.io.commit.valids
    rename_stage.io.com_uops := rob.io.commit.uops
@@ -515,7 +521,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       iu.io.dis_valids(w) := dis_valids(w) && dis_uops(w).iqtype === UInt(iu.iqType)
       iu.io.dis_uops(w) := dis_uops(w)
 
-      when (dis_uops(w).uopc === uopSTA && dis_uops(w).lrs2_rtype === RT_FLT) {
+      when (dis_uops(w).uopc === uopSTA && dis_uops(w).lrs2_rtype === RT_FLT) { // ??? --Jecy
          iu.io.dis_uops(w).lrs2_rtype := RT_X
          iu.io.dis_uops(w).prs2_busy := Bool(false)
       }
@@ -524,10 +530,13 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    fp_pipeline.io.dis_valids <> dis_valids
    fp_pipeline.io.dis_uops <> dis_uops
 
+   hfp_pipeline.io.dis_valids <> dis_valids
+   hfp_pipeline.io.dis_uops <> dis_uops
+
    // Output (Issue)
 
    val ifpu_idx = exe_units.length-1 // TODO hack; need more disciplined manner to hook up ifpu
-   require (exe_units(ifpu_idx).supportedFuncUnits.ifpu)
+   require (exe_units(ifpu_idx).supportedFuncUnits.ifpu || exe_units(ifpu_idx).supportedFuncUnits.ihfpu)
 
    var iss_idx = 0
    var iss_cnt = 0
@@ -541,7 +550,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       if (w == ifpu_idx) {
          // TODO hack, need a more disciplined way to connect to an issue port
          // TODO XXX need to also apply back-pressure.
-         fu_types = fu_types | FUConstants.FU_I2F
+         fu_types = fu_types | FUConstants.FU_I2F | FUConstants.FU_I2HF
       }
 
       if (exe_units(w).supportedFuncUnits.muld && regreadLatency > 0)
@@ -632,6 +641,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
    exe_units.map(_.io.fcsr_rm := csr.io.fcsr_rm)
    fp_pipeline.io.fcsr_rm := csr.io.fcsr_rm
+   hfp_pipeline.io.fcsr_rm := csr.io.fcsr_rm
 
    csr.io.hartid := io.hartid
    csr.io.interrupts := io.interrupts
@@ -677,7 +687,16 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       iregister_read.io.exe_reqs(ifpu_idx).valid &&
       iregister_read.io.exe_reqs(ifpu_idx).bits.uop.fu_code === FUConstants.FU_I2F
 
+   when (iregister_read.io.exe_reqs(ifpu_idx).bits.uop.fu_code === FUConstants.FU_I2HF) {
+      exe_units(ifpu_idx).io.req.valid := Bool(false)
+   }
+   hfp_pipeline.io.fromint := iregister_read.io.exe_reqs(ifpu_idx)
+   hfp_pipeline.io.fromint.valid :=
+      iregister_read.io.exe_reqs(ifpu_idx).valid &&
+      iregister_read.io.exe_reqs(ifpu_idx).bits.uop.fu_code === FUConstants.FU_I2HF
+
    fp_pipeline.io.brinfo := br_unit.brinfo
+   hfp_pipeline.io.brinfo := br_unit.brinfo
 
 
    //-------------------------------------------------------------
@@ -771,6 +790,12 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
             fp_pipeline.io.ll_wport.bits.uop  := wbresp.bits.uop
             fp_pipeline.io.ll_wport.bits.data := wbdata
             fp_pipeline.io.ll_wport.bits.fflags.valid := Bool(false)
+
+            hfp_pipeline.io.ll_wport.valid     := wbIsValid(RT_FHT)
+            hfp_pipeline.io.ll_wport.bits.uop  := wbresp.bits.uop
+            hfp_pipeline.io.ll_wport.bits.data := wbdata
+            hfp_pipeline.io.ll_wport.bits.fflags.valid := Bool(false)
+
          }
          else
          {
@@ -783,6 +808,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
          if (!exe_units(i).is_mem_unit) {
             assert (!wbIsValid(RT_FLT), "[fppipeline] An FP writeback is being attempted to the Int Regfile.")
+            assert (!wbIsValid(RT_FHT), "[hfppipeline] An HFP writeback is being attempted to the Int Regfile.")
          }
 
          assert (!(exe_units(i).io.resp(j).valid &&
@@ -811,6 +837,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
    assert (ll_wbarb.io.in(0).ready) // never backpressure the memory unit.
    ll_wbarb.io.in(1) <> fp_pipeline.io.toint
+   ll_wbarb.io.in(2) <> hfp_pipeline.io.toint
    iregfile.io.write_ports(llidx) <> WritePort(ll_wbarb.io.out, IPREG_SZ, xLen)
 
 
@@ -903,6 +930,15 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       cnt += 1
       f_cnt += 1
    }
+
+   for (wakeup <- hfp_pipeline.io.wakeups)
+   {
+      rob.io.wb_resps(cnt) <> wakeup
+      rob.io.fflags(f_cnt) <> wakeup.bits.fflags
+      rob.io.debug_wb_valids(cnt) := Bool(false) // TODO XXX add back commit logging for FP instructions.
+      cnt += 1
+      f_cnt += 1
+   }
    assert (cnt == rob.num_wakeup_ports)
 
 
@@ -940,6 +976,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    // flush on exceptions, miniexeptions, and after some special instructions
 
    fp_pipeline.io.flush_pipeline := rob.io.flush.valid
+   hfp_pipeline.io.flush_pipeline := rob.io.flush.valid
    for (w <- 0 until exe_units.length)
    {
       exe_units(w).io.req.bits.kill := rob.io.flush.valid
@@ -960,6 +997,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    assert (!(idle_cycles.value(13)), "Pipeline has hung.")
 
    fp_pipeline.io.debug_tsc_reg := debug_tsc_reg
+   hfp_pipeline.io.debug_tsc_reg := debug_tsc_reg
 
    //-------------------------------------------------------------
    // Uarch Hardware Performance Events (HPEs)
@@ -1050,6 +1088,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    csr.io.events(31) := !issue_units(0).io.dis_readys.reduce(_&_)
    csr.io.events(32) := !issue_units(1).io.dis_readys.reduce(_&_)
    csr.io.events(33) := !fp_pipeline.io.dis_readys.reduce(_&_)
+   csr.io.events(37) := !hfp_pipeline.io.dis_readys.reduce(_&_)
 
    assert (!(Range(0,COMMIT_WIDTH).map{w =>
       rob.io.commit.valids(w) && rob.io.commit.uops(w).is_br_or_jmp && rob.io.commit.uops(w).is_jal &&

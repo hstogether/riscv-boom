@@ -96,7 +96,7 @@ class RenameStage(
    pl_width: Int,
    num_int_wb_ports: Int,
    num_fp_wb_ports: Int,
-   num_hfp_wb_ports: Int = 0)
+   num_hfp_wb_ports: Int)
 (implicit p: Parameters) extends BoomModule()(p)
 {
    val io = IO(new RenameStageIO(pl_width, numIntPhysRegs, numFpPhysRegs, numFpPhysRegs, num_int_wb_ports, num_fp_wb_ports, num_hfp_wb_ports))

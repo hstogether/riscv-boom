@@ -119,6 +119,7 @@ trait HasBoomCoreParameters extends tile.HasCoreParameters
    val enableAgePriorityIssue = boomParams.enableAgePriorityIssue
 
    // currently, only support one of each.
+   require (issueParams.count(_.iqType == IQT_HFP.litValue) == 1)
    require (issueParams.count(_.iqType == IQT_FP.litValue) == 1)
    require (issueParams.count(_.iqType == IQT_MEM.litValue) == 1)
    require (issueParams.count(_.iqType == IQT_INT.litValue) == 1)

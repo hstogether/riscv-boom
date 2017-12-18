@@ -24,9 +24,10 @@ class DefaultBoomConfig extends Config((site, here, up) => {
          fWidth = 2,
          useCompressed = false,
          nPerfCounters = 29,
-         nPerfEvents = 37,
+         nPerfEvents = 38,
          perfIncWidth = 3, // driven by issue ports, as set in BoomCoreParams.issueParams
-         fpu = Some(tile.FPUParams(sfmaLatency=4, dfmaLatency=4, divSqrt=true))),
+         fpu = Some(tile.FPUParams(sfmaLatency=4, dfmaLatency=4, divSqrt=true)),
+         hfpu = Some(tile.FPUParams(hfmaLatency=4, divSqrt=false))),
       btb = Some(BTBParams(nEntries = 0, updatesOutOfOrder = true)),
       dcache = Some(DCacheParams(rowBits = site(L1toL2Config).beatBytes*8, nSets=64, nWays=8, nMSHRs=4, nTLBEntries=8)),
       icache = Some(ICacheParams(rowBits = site(L1toL2Config).beatBytes*8, nSets=64, nWays=8))
@@ -38,9 +39,11 @@ class DefaultBoomConfig extends Config((site, here, up) => {
       issueParams = Seq(
          IssueParams(issueWidth=1, numEntries=20, iqType=IQT_MEM.litValue),
          IssueParams(issueWidth=2, numEntries=20, iqType=IQT_INT.litValue),
-         IssueParams(issueWidth=1, numEntries=20, iqType=IQT_FP.litValue)),
+         IssueParams(issueWidth=1, numEntries=20, iqType=IQT_FP.litValue),
+         IssueParams(issueWidth=1, numEntries=20, iqType=IQT_HFP.litValue)),
       numIntPhysRegisters = 100,
       numFpPhysRegisters = 64,
+      numHfpPhysRegisters = 64,
       numLsuEntries = 16,
       maxBrCount = 8,
       btb = BTBsaParameters(nSets=64, nWays=4, nRAS=8, tagSz=20),
@@ -72,9 +75,11 @@ class WithSmallBooms extends Config((site, here, up) => {
       issueParams = Seq(
          IssueParams(issueWidth=1, numEntries=4, iqType=IQT_MEM.litValue),
          IssueParams(issueWidth=1, numEntries=4, iqType=IQT_INT.litValue),
-         IssueParams(issueWidth=1, numEntries=4, iqType=IQT_FP.litValue)),
+         IssueParams(issueWidth=1, numEntries=4, iqType=IQT_FP.litValue),
+         IssueParams(issueWidth=1, numEntries=4, iqType=IQT_HFP.litValue)),
       numIntPhysRegisters = 56,
       numFpPhysRegisters = 48,
+      numHfpPhysRegisters = 48,
       numLsuEntries = 4,
       maxBrCount = 4,
       gshare = Some(GShareParameters(enabled = true, history_length=12))

@@ -86,6 +86,7 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
                             , val has_div       : Boolean       = false
                             , val has_fdiv      : Boolean       = false
                             , val has_ifpu      : Boolean       = false
+                            , val has_ihfpu     : Boolean       = false
                             , val has_fpiu      : Boolean       = false
                             , val has_hfpu      : Boolean       = false
                             )(implicit p: Parameters) extends BoomModule()(p)
@@ -99,12 +100,12 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
    def numBypassPorts: Int = num_bypass_stages
    def hasBranchUnit : Boolean = is_branch_unit
    def isBypassable  : Boolean = bypassable
-   def hasFFlags     : Boolean = has_fpu || has_fdiv
+   def hasFFlags     : Boolean = has_fpu || has_fdiv || has_hfpu
    def usesFRF       : Boolean = (has_fpu || has_fdiv) && !(has_alu || has_mul)
-   def usesIRF       : Boolean = !(has_fpu || has_fdiv) && (has_alu || has_mul || is_mem_unit || has_ifpu)
+   def usesIRF       : Boolean = !(has_fpu || has_fdiv || has_hfpu) && (has_alu || has_mul || is_mem_unit || has_ifpu || has_ihfpu)
 
-   require ((has_fpu || has_fdiv) ^ (has_alu || has_mul || is_mem_unit || has_ifpu),
-      "[execute] we no longer support mixing FP and Integer functional units in the same exe unit.")
+   require ((has_fpu || has_fdiv || has_hfpu) ^ (has_alu || has_mul || is_mem_unit || has_ifpu || has_ihfpu),
+      "[execute] we no longer support mixing FP/HFP and Integer functional units in the same exe unit.")
 
    def supportedFuncUnits =
    {
@@ -117,6 +118,7 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
          csr = uses_csr_wport,
          fdiv = has_fdiv,
          ifpu = has_ifpu,
+         ihfpu = has_ihfpu,
          hfpu = has_hfpu)
    }
 }
@@ -130,6 +132,7 @@ class ALUExeUnit(
    has_div         : Boolean = false,
    has_fdiv        : Boolean = false,
    has_ifpu        : Boolean = false,
+   has_ihfpu       : Boolean = false,
    use_slow_mul    : Boolean = false)
    (implicit p: Parameters)
    extends ExecutionUnit(
@@ -149,7 +152,8 @@ class ALUExeUnit(
       has_mul  = has_mul,
       has_div  = has_div,
       has_fdiv = has_fdiv,
-      has_ifpu = has_ifpu)(p)
+      has_ifpu = has_ifpu,
+      has_ihfpu= has_ihfpu)(p)
 {
    val has_muldiv = has_div || (has_mul && use_slow_mul)
 
@@ -161,7 +165,7 @@ class ALUExeUnit(
    else if (has_mul && use_slow_mul) println ("       - Mul (unpipelined)")
    else if (has_div) println ("       - Div")
    if (has_fdiv) println ("       - FDiv/FSqrt")
-   if (has_ifpu) println ("       - IFPU (for read port access)")
+   if (has_ifpu || has_ihfpu) println ("       - IFPU/IHFPU (for read port access)")
 
    val muldiv_busy = Wire(init=Bool(false))
    val fdiv_busy = Wire(init=Bool(false))
