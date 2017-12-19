@@ -190,7 +190,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       //val unrec_d = hardfloat.fNFromRecFN(11, 53, sdata)
       val unrec_h = hardfloat.fNFromRecFN(5, 11, sdata)
       //val unrec_out = Mux(io.tosdq.bits.uop.fp_single, Cat(Fill(32, unrec_s(31)), unrec_s), unrec_d)
-      val unrec_out = Cst(Fill(48, unrec_h(15)),unrec_h)
+      val unrec_out = Cat(Fill(48, unrec_h(15)),unrec_h)
 
       io.tosdq.bits.data := unrec_out
    }
