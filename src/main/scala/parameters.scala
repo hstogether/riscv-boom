@@ -97,6 +97,7 @@ trait HasBoomCoreParameters extends tile.HasCoreParameters
    // Pipelining
 
    val imulLatency = boomParams.imulLatency
+   val hfmaLatency = if (rocketParams.hfpu.isDefined) rocketParams.hfpu.get.hfmaLatency else 3
    val dfmaLatency = if (rocketParams.fpu.isDefined) rocketParams.fpu.get.dfmaLatency else 3
    val sfmaLatency = if (rocketParams.fpu.isDefined) rocketParams.fpu.get.sfmaLatency else 3
    // All FPU ops padded out to same delay for writeport scheduling.
