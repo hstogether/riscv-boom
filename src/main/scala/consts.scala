@@ -125,7 +125,7 @@ trait ScalarOpConstants
 
 
    // Decode Stage Control Signals
-   val RT_NAO   = UInt(7, 3)  // not a operand
+   val RT_NAO   = UInt(7, 3)  // not a operand ?? -- Jecy
    val RT_FIX   = UInt(0, 3)
    val RT_FLT   = UInt(1, 3)
    val RT_FHT   = UInt(4, 3)
@@ -219,6 +219,8 @@ trait ScalarOpConstants
    val uopFMV_X_D   = UInt(71, UOPC_SZ)
    val uopFMV_H_X   = UInt(123,UOPC_SZ)
    val uopFMV_X_H   = UInt(146,UOPC_SZ)
+   val uopFMV_F_H   = UInt(150,UOPC_SZ)
+   val uopFMV_H_F   = UInt(151,UOPC_SZ)
 
    val uopFSGNJ_S   = UInt(72, UOPC_SZ)
    val uopFSGNJ_D   = UInt(73, UOPC_SZ)
