@@ -535,8 +535,11 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
    // Output (Issue)
 
-   val ifpu_idx = exe_units.length-1 // TODO hack; need more disciplined manner to hook up ifpu
-   require (exe_units(ifpu_idx).supportedFuncUnits.ifpu || exe_units(ifpu_idx).supportedFuncUnits.ihfpu)
+   val ifpu_idx = exe_units.length-2 // TODO hack; need more disciplined manner to hook up ifpu
+   require (exe_units(ifpu_idx).supportedFuncUnits.ifpu)
+   val ihfpu_idx = exe_units.length-1 // TODO hack; need more disciplined manner to hook up ifpu
+   require (exe_units(ihfpu_idx).supportedFuncUnits.ihfpu)
+
 
    var iss_idx = 0
    var iss_cnt = 0
@@ -551,6 +554,11 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
          // TODO hack, need a more disciplined way to connect to an issue port
          // TODO XXX need to also apply back-pressure.
          fu_types = fu_types | FUConstants.FU_I2F | FUConstants.FU_I2HF
+      }
+      if (w == ihfpu_idx) {
+         // TODO hack, need a more disciplined way to connect to an issue port
+         // TODO XXX need to also apply back-pressure.
+         fu_types = fu_types | FUConstants.FU_I2HF
       }
 
       if (exe_units(w).supportedFuncUnits.muld && regreadLatency > 0)
@@ -687,13 +695,13 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       iregister_read.io.exe_reqs(ifpu_idx).valid &&
       iregister_read.io.exe_reqs(ifpu_idx).bits.uop.fu_code === FUConstants.FU_I2F
 
-   when (iregister_read.io.exe_reqs(ifpu_idx).bits.uop.fu_code === FUConstants.FU_I2HF) {
-      exe_units(ifpu_idx).io.req.valid := Bool(false)
+   when (iregister_read.io.exe_reqs(ihfpu_idx).bits.uop.fu_code === FUConstants.FU_I2HF) {
+      exe_units(ihfpu_idx).io.req.valid := Bool(false)
    }
-   hfp_pipeline.io.fromint := iregister_read.io.exe_reqs(ifpu_idx)
+   hfp_pipeline.io.fromint := iregister_read.io.exe_reqs(ihfpu_idx)
    hfp_pipeline.io.fromint.valid :=
-      iregister_read.io.exe_reqs(ifpu_idx).valid &&
-      iregister_read.io.exe_reqs(ifpu_idx).bits.uop.fu_code === FUConstants.FU_I2HF
+      iregister_read.io.exe_reqs(ihfpu_idx).valid &&
+      iregister_read.io.exe_reqs(ihfpu_idx).bits.uop.fu_code === FUConstants.FU_I2HF
 
    fp_pipeline.io.brinfo := br_unit.brinfo
    hfp_pipeline.io.brinfo := br_unit.brinfo
@@ -742,6 +750,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    lsu.io.dmem_is_ordered:= dc_shim.io.core.ordered
 
    lsu.io.fp_stdata <> fp_pipeline.io.tosdq
+   lsu.io.hfp_stdata <> hfp_pipeline.io.tosdq
 
 
    //-------------------------------------------------------------
@@ -886,7 +895,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
                                         (wb_uop.dst_rtype === RT_FIX || wb_uop.dst_rtype === RT_FLT)
 
          val data = resp.bits.data
-         if (eu.hasFFlags || (eu.is_mem_unit && usingFPU))
+         if (eu.hasFFlags || (eu.is_mem_unit && (usingFPU || usingHFPU)))
          {
             if (eu.hasFFlags)
             {

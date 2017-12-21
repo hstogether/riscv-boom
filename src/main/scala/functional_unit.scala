@@ -28,7 +28,7 @@ import uncore.constants.MemoryOpConstants._
 object FUConstants
 {
    // bit mask, since a given execution pipeline may support multiple functional units
-   val FUC_SZ  = 14
+   val FUC_SZ  = 16
    val FU_X    = BitPat.dontCare(FUC_SZ)
    val FU_ALU  = UInt(  1,  FUC_SZ)
    val FU_BRU  = UInt(  2,  FUC_SZ)
@@ -43,7 +43,9 @@ object FUConstants
    val FU_HFPU = UInt(1024, FUC_SZ)
    val FU_HFDV = UInt(2048, FUC_SZ)
    val FU_I2HF = UInt(4096, FUC_SZ)
-   val FU_HF2I = UInt(8192, FUC_SZ)
+   val FU_F2HF = UInt(8192, FUC_SZ)
+   val FU_HF2I = UInt(16384, FUC_SZ)
+   val FU_HF2F = UInt(32768, FUC_SZ)
 }
 import FUConstants._
 
@@ -58,6 +60,8 @@ class SupportedFuncUnits(
    val fdiv: Boolean = false,
    val ifpu: Boolean = false,
    val ihfpu: Boolean= false,
+   val fphfpu:Boolean= false,
+   val hfdiv: Boolean = false,
    val hfpu: Boolean = false)
 {
 }
@@ -710,6 +714,39 @@ class IntToFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    io.resp.bits.fflags.bits.flags := ifpu.io.out.bits.exc
 }
 
+class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
+   num_stages = p(BoomKey).intToFpLatency,
+   num_bypass_stages = 0,
+   earliest_bypass_stage = 0,
+   data_width = 65)(p)
+{
+   val fp_decoder = Module(new UOPCodeHFPUDecoder) // TODO use a simpler decoder
+   val io_req = io.req.bits
+   fp_decoder.io.uopc := io_req.uop.uopc
+   val fp_ctrl = fp_decoder.io.sigs
+   val fp_rm = Mux(ImmGenRm(io_req.uop.imm_packed) === Bits(7), io.fcsr_rm, ImmGenRm(io_req.uop.imm_packed))
+   val req = Wire(new tile.FPInput)
+   req := fp_ctrl
+   req.rm := fp_rm
+   req.in1 := io_req.rs1_data
+   req.in2 := io_req.rs2_data
+   req.typ := ImmGenTyp(io_req.uop.imm_packed)
+
+   assert (!(io.req.valid && fp_ctrl.fromint && req.in1(64).toBool),
+      "[func] IntToFP integer input has 65th high-order bit set!")
+
+   assert (!(io.req.valid && !fp_ctrl.fromint),
+      "[func] Only support fromInt micro-ops.")
+
+   val ifpu = Module(new tile.IntToFP(intToFpLatency))
+   ifpu.io.in.valid := io.req.valid
+   ifpu.io.in.bits := req
+
+   io.resp.bits.data              := ifpu.io.out.bits.data
+   io.resp.bits.fflags.valid      := ifpu.io.out.valid
+   io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
+   io.resp.bits.fflags.bits.flags := ifpu.io.out.bits.exc
+}
 
 
 // Iterative/unpipelined, can only hold a single MicroOp at a time TODO allow up to N micro-ops simultaneously.

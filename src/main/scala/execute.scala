@@ -32,6 +32,8 @@ class ExeUnitResp(data_width: Int)(implicit p: Parameters) extends BoomBundle()(
    val fflags = new ValidIO(new FFlagsResp) // write fflags to ROB
 
    var writesToIRF = true // does this response unit plug into the integer regfile?
+   var writesToHFRF = true
+   var writesToFRF  = true
    override def cloneType: this.type = new ExeUnitResp(data_width).asInstanceOf[this.type]
 }
 
@@ -88,7 +90,11 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
                             , val has_ifpu      : Boolean       = false
                             , val has_ihfpu     : Boolean       = false
                             , val has_fpiu      : Boolean       = false
+                            , val has_fphfpu    : Boolean       = false
+                            , val has_hfpfpu    : Boolean       = false
                             , val has_hfpu      : Boolean       = false
+                            , val has_hfdiv     : Boolean       = false
+                            , val has_hfpiu     : Boolean       = false
                             )(implicit p: Parameters) extends BoomModule()(p)
 {
    val io = IO(new ExecutionUnitIO(num_rf_read_ports, num_rf_write_ports
@@ -104,7 +110,7 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
    def usesFRF       : Boolean = (has_fpu || has_fdiv) && !(has_alu || has_mul)
    def usesIRF       : Boolean = !(has_fpu || has_fdiv || has_hfpu) && (has_alu || has_mul || is_mem_unit || has_ifpu || has_ihfpu)
 
-   require ((has_fpu || has_fdiv || has_hfpu) ^ (has_alu || has_mul || is_mem_unit || has_ifpu || has_ihfpu),
+   require ((has_fpu || has_fdiv || has_hfpu || has_fphfpu) ^ (has_alu || has_mul || is_mem_unit || has_ifpu || has_ihfpu),
       "[execute] we no longer support mixing FP/HFP and Integer functional units in the same exe unit.")
 
    def supportedFuncUnits =
@@ -119,6 +125,8 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
          fdiv = has_fdiv,
          ifpu = has_ifpu,
          ihfpu = has_ihfpu,
+         fphfpu = has_fphfpu,
+         hfdiv = has_hfdiv,
          hfpu = has_hfpu)
    }
 }
@@ -338,7 +346,8 @@ class ALUExeUnit(
 class FPUExeUnit(
    has_fpu  : Boolean = true,
    has_fdiv : Boolean = false,
-   has_fpiu : Boolean = false
+   has_fpiu : Boolean = false,
+   has_fphfpu: Boolean = false
    )
    (implicit p: Parameters)
    extends ExecutionUnit(
@@ -350,26 +359,34 @@ class FPUExeUnit(
       has_alu  = false,
       has_fpu  = has_fpu,
       has_fdiv = has_fdiv,
-      has_fpiu = has_fpiu)(p)
+      has_fpiu = has_fpiu,
+      has_fphfpu=has_fphfpu)(p)
 {
    println ("     ExeUnit--")
    if (has_fpu) println ("       - FPU (Latency: " + dfmaLatency + ")")
    if (has_fdiv) println ("       - FDiv/FSqrt")
    if (has_fpiu) println ("       - FPIU (writes to Integer RF)")
+   if (has_fphfpu) println ("       - FUHFPU (write to HFPRf)")
 
    val fdiv_busy = Wire(init=Bool(false))
    val fpiu_busy = Wire(init=Bool(false))
+   val fphfpu_busy= Wire(init=Bool(false))
 
    // The Functional Units --------------------
    val fu_units = ArrayBuffer[FunctionalUnit]()
 
    io.fu_types := Mux(Bool(has_fpu), FU_FPU, Bits(0)) |
                   Mux(!fdiv_busy && Bool(has_fdiv), FU_FDV, Bits(0)) |
-                  Mux(!fpiu_busy && Bool(has_fpiu), FU_F2I, Bits(0))
+                  Mux(!fpiu_busy && Bool(has_fpiu), FU_F2I, Bits(0)) |
+                  Mux(!fphfpu_busy && Bool(has_fphfpu), FU_F2HF, Bits(0))
 
 
    io.resp(0).bits.writesToIRF = false
+   io.resp(0).bits.writesToHFRF = false
+   io.resp(0).bits.writesToFRF = false
    io.resp(1).bits.writesToIRF = true
+   io.resp(1).bits.writesToHFRF = true
+   io.resp(1).bits.writesToFRF = false
 
    // FPU Unit -----------------------
    var fpu: FPUUnit = null
@@ -436,10 +453,15 @@ class FPUExeUnit(
    io.resp(0).bits.fflags := Mux(fpu_resp_val, fpu_resp_fflags, fdiv_resp_fflags)
 
    // Outputs (Write Port #1) -- FpToInt Queuing Unit -----------------------
+   if(io.req.bits.uop.fu_code_is(FU_F2I)==true){
+      io.resp(1).bits.writesToHFRF = false
+   } else {
+      io.resp(1).bits.writesToIRF = false
+   }
 
    // TODO instantiate our own fpiu; and remove it from fpu.scala.
 
-   // buffer up results since we share write-port on integer regfile.
+   // buffer up results since we share write-port on integer regfile. and HFP regfile
    val queue = Module(new QueueForMicroOpWithData(entries = dfmaLatency + 3, data_width)) // TODO being overly conservative
    queue.io.enq.valid       := fpu.io.resp.valid && fpu.io.resp.bits.uop.fu_code_is(FU_F2I)
    queue.io.enq.bits.uop    := fpu.io.resp.bits.uop
@@ -450,9 +472,146 @@ class FPUExeUnit(
    io.resp(1) <> queue.io.deq
 
    fpiu_busy := !(queue.io.empty)
+   fphfpu_busy := !(queue.io.empty)
 
    assert (queue.io.enq.ready) // If this backs up, we've miscalculated the size of the queue.
 }
+
+// HFPU-only unit, with optional second write-port for ToInt micro-ops.
+class HFPUExeUnit(
+   has_hfpu  : Boolean = true,
+   has_hfdiv : Boolean = false,
+   has_hfpiu : Boolean = false,
+   has_hfpfpu : Boolean = false
+   )
+   (implicit p: Parameters)
+   extends ExecutionUnit(
+      num_rf_read_ports = 3,
+      num_rf_write_ports = 2, // one for FRF, oen for IRF
+      num_bypass_stages = 0,
+      data_width = 65,
+      bypassable = false,
+      has_alu  = false,
+      has_hfpu  = has_hfpu,
+      has_hfdiv = has_hfdiv,
+      has_hfpiu = has_hfpiu,
+      has_hfpfpu = has_hfpfpu)(p)
+{
+   println ("     ExeUnit--")
+   if (has_hfpu) println ("       - HFPU (Latency: " + dfmaLatency + ")")
+   if (has_hfdiv) println ("       - HFDiv/FSqrt")
+   if (has_hfpiu) println ("       - HFPIU (writes to Integer RF)")
+   if (has_fphfpu) println ("       - FUHFPU (write to HFPRf)")
+
+   val hfdiv_busy = Wire(init=Bool(false))
+   val hfpiu_busy = Wire(init=Bool(false))
+   val hfpfpu_busy= Wire(init=Bool(false))
+
+   // The Functional Units --------------------
+   val fu_units = ArrayBuffer[FunctionalUnit]()
+
+   io.fu_types := Mux(Bool(has_fpu), FU_HFPU, Bits(0)) |
+                  Mux(!hfdiv_busy && Bool(has_hfdiv), FU_HFDV, Bits(0)) |
+                  Mux(!hfpiu_busy && Bool(has_hfpiu), FU_HF2I, Bits(0)) |
+                  Mux(!hfpfpu_busy && Bool(has_hfpfpu), FU_HF2F, Bits(0))
+
+
+   io.resp(0).bits.writesToIRF = false
+   io.resp(0).bits.writesToHFRF = false
+   io.resp(0).bits.writesToFRF = false
+   io.resp(1).bits.writesToIRF = true
+   io.resp(1).bits.writesToHFRF = false
+   io.resp(1).bits.writesToFRF = true
+
+   // FPU Unit -----------------------
+   var fpu: FPUUnit = null
+   val fpu_resp_val = Wire(init=Bool(false))
+   val fpu_resp_fflags = Wire(new ValidIO(new FFlagsResp()))
+   fpu_resp_fflags.valid := Bool(false)
+   if (has_fpu)
+   {
+      fpu = Module(new FPUUnit())
+      fpu.io.req.valid           := io.req.valid &&
+                                    (io.req.bits.uop.fu_code_is(FU_FPU) ||
+                                    io.req.bits.uop.fu_code_is(FU_F2I)) // TODO move to using a separate unit
+      fpu.io.req.bits.uop        := io.req.bits.uop
+      fpu.io.req.bits.rs1_data   := io.req.bits.rs1_data
+      fpu.io.req.bits.rs2_data   := io.req.bits.rs2_data
+      fpu.io.req.bits.rs3_data   := io.req.bits.rs3_data
+      fpu.io.req.bits.kill       := io.req.bits.kill
+      fpu.io.fcsr_rm             := io.fcsr_rm
+      fpu.io.brinfo <> io.brinfo
+      fpu_resp_val := fpu.io.resp.valid
+      fpu_resp_fflags := fpu.io.resp.bits.fflags
+      fu_units += fpu
+   }
+
+
+   // FDiv/FSqrt Unit -----------------------
+   var fdivsqrt: FDivSqrtUnit = null
+   val fdiv_resp_val = Wire(init=Bool(false))
+   val fdiv_resp_uop = Wire(new MicroOp())
+   val fdiv_resp_data = Wire(Bits(width=65))
+   val fdiv_resp_fflags = Wire(new ValidIO(new FFlagsResp()))
+   fdiv_resp_fflags.valid := Bool(false)
+   if (has_fdiv)
+   {
+      fdivsqrt = Module(new FDivSqrtUnit())
+      fdivsqrt.io.req.valid         := io.req.valid && io.req.bits.uop.fu_code_is(FU_FDV)
+      fdivsqrt.io.req.bits.uop      := io.req.bits.uop
+      fdivsqrt.io.req.bits.rs1_data := io.req.bits.rs1_data
+      fdivsqrt.io.req.bits.rs2_data := io.req.bits.rs2_data
+      fdivsqrt.io.req.bits.kill     := io.req.bits.kill
+      fdivsqrt.io.fcsr_rm           := io.fcsr_rm
+      fdivsqrt.io.brinfo <> io.brinfo
+
+      // share write port with the pipelined units
+      fdivsqrt.io.resp.ready := !(fu_units.map(_.io.resp.valid).reduce(_|_)) // TODO PERF will get blocked by fpiu.
+
+      hfdiv_busy := !fdivsqrt.io.req.ready || (io.req.valid && io.req.bits.uop.fu_code_is(FU_FDV))
+
+      fdiv_resp_val := fdivsqrt.io.resp.valid
+      fdiv_resp_uop := fdivsqrt.io.resp.bits.uop
+      fdiv_resp_data := fdivsqrt.io.resp.bits.data
+      fdiv_resp_fflags := fdivsqrt.io.resp.bits.fflags
+
+      fu_units += fdivsqrt
+   }
+
+   // Outputs (Write Port #0)  ---------------
+
+   io.resp(0).valid    := fu_units.map(_.io.resp.valid).reduce(_|_) &&
+                          !(fpu.io.resp.valid && fpu.io.resp.bits.uop.fu_code_is(FU_F2I))
+   io.resp(0).bits.uop := new MicroOp().fromBits(
+                           PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.uop.asUInt))))
+   io.resp(0).bits.data:= PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.data.asUInt))).asUInt
+   io.resp(0).bits.fflags := Mux(fpu_resp_val, fpu_resp_fflags, fdiv_resp_fflags)
+
+   // Outputs (Write Port #1) -- FpToInt Queuing Unit -----------------------
+   if(io.req.bits.uop.fu_code_is(FU_HF2I)==true){
+      io.resp(1).bits.writesToFRF = false
+   } else {
+      io.resp(1).bits.writesToIRF = false
+   }
+
+   // TODO instantiate our own fpiu; and remove it from fpu.scala.
+
+   // buffer up results since we share write-port on integer regfile. and HFP regfile
+   val queue = Module(new QueueForMicroOpWithData(entries = dfmaLatency + 3, data_width)) // TODO being overly conservative
+   queue.io.enq.valid       := fpu.io.resp.valid && fpu.io.resp.bits.uop.fu_code_is(FU_F2I)
+   queue.io.enq.bits.uop    := fpu.io.resp.bits.uop
+   queue.io.enq.bits.data   := fpu.io.resp.bits.data
+   queue.io.enq.bits.fflags := fpu.io.resp.bits.fflags
+   queue.io.brinfo          := io.brinfo
+   queue.io.flush           := io.req.bits.kill
+   io.resp(1) <> queue.io.deq
+
+   hfpiu_busy := !(queue.io.empty)
+   hfpfpu_busy := !(queue.io.empty)
+
+   assert (queue.io.enq.ready) // If this backs up, we've miscalculated the size of the queue.
+}
+
 
 
 class FDivSqrtExeUnit(implicit p: Parameters)
@@ -521,6 +680,87 @@ class IntToFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
 
    assert (queue.io.enq.ready) // If this backs up, we've miscalculated the size of the queue.
 }
+
+class FPToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
+   has_ifpu = true,
+   num_rf_read_ports = 2,
+   num_rf_write_ports = 1,
+   num_bypass_stages = 0,
+   data_width = 65,
+   // don't schedule uops from issue-window -- we're hard-hacking the datapath,
+   // since the operand data comes from the IRF but writes back to the FRF.
+   uses_iss_unit = false)
+{
+   println ("     ExeUnit--")
+   println ("       - IntToFP")
+   val busy = Wire(init=Bool(false))
+   io.fu_types := Mux(!busy, FU_I2F, Bits(0))
+   io.resp(0).bits.writesToIRF = false
+
+   val ifpu = Module(new IntToFPUnit())
+   ifpu.io.req <> io.req
+   ifpu.io.fcsr_rm := io.fcsr_rm
+   ifpu.io.brinfo <> io.brinfo
+   io.bypass <> ifpu.io.bypass
+
+   // buffer up results since we share write-port on integer regfile.
+   val queue = Module(new QueueForMicroOpWithData(entries = p(BoomKey).intToFpLatency + 3, data_width)) // TODO being overly conservative
+   queue.io.enq.valid       := ifpu.io.resp.valid
+   queue.io.enq.bits.uop    := ifpu.io.resp.bits.uop
+   queue.io.enq.bits.data   := ifpu.io.resp.bits.data
+   queue.io.enq.bits.fflags := ifpu.io.resp.bits.fflags
+   queue.io.brinfo := io.brinfo
+   queue.io.flush := io.req.bits.kill
+
+   io.resp(0) <> queue.io.deq
+
+   busy := !(queue.io.empty)
+
+
+   assert (queue.io.enq.ready) // If this backs up, we've miscalculated the size of the queue.
+}
+
+
+
+class IntToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
+   has_ifpu = true,
+   num_rf_read_ports = 2,
+   num_rf_write_ports = 1,
+   num_bypass_stages = 0,
+   data_width = 65,
+   // don't schedule uops from issue-window -- we're hard-hacking the datapath,
+   // since the operand data comes from the IRF but writes back to the FRF.
+   uses_iss_unit = false)
+{
+   println ("     ExeUnit--")
+   println ("       - IntToHFP")
+   val busy = Wire(init=Bool(false))
+   io.fu_types := Mux(!busy, FU_I2HF, Bits(0))
+   io.resp(0).bits.writesToIRF = false
+
+   val ifpu = Module(new IntToFPUnit())
+   ifpu.io.req <> io.req
+   ifpu.io.fcsr_rm := io.fcsr_rm
+   ifpu.io.brinfo <> io.brinfo
+   io.bypass <> ifpu.io.bypass
+
+   // buffer up results since we share write-port on integer regfile.
+   val queue = Module(new QueueForMicroOpWithData(entries = p(BoomKey).intToFpLatency + 3, data_width)) // TODO being overly conservative
+   queue.io.enq.valid       := ifpu.io.resp.valid
+   queue.io.enq.bits.uop    := ifpu.io.resp.bits.uop
+   queue.io.enq.bits.data   := ifpu.io.resp.bits.data
+   queue.io.enq.bits.fflags := ifpu.io.resp.bits.fflags
+   queue.io.brinfo := io.brinfo
+   queue.io.flush := io.req.bits.kill
+
+   io.resp(0) <> queue.io.deq
+
+   busy := !(queue.io.empty)
+
+
+   assert (queue.io.enq.ready) // If this backs up, we've miscalculated the size of the queue.
+}
+
 
 
 class MemExeUnit(implicit p: Parameters) extends ExecutionUnit(num_rf_read_ports = 2,

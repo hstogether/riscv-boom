@@ -67,7 +67,7 @@ class LoadStoreUnitIO(pl_width: Int)(implicit p: Parameters) extends BoomBundle(
    // Execute Stage
    val exe_resp           = (new ValidIO(new FuncUnitResp(xLen))).flip
    val fp_stdata          = Valid(new MicroOpWithData(fLen)).flip
-   val hfp_stdata          = Valid(new MicroOpWithData(fLen)).flip
+   val hfp_stdata         = Valid(new MicroOpWithData(fLen)).flip
 
    // Commit Stage
    val commit_store_mask  = Vec(pl_width, Bool()).asInput

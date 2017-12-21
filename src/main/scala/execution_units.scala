@@ -19,7 +19,7 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
    val totalIssueWidth = issueParams.map(_.issueWidth).sum
    if (!fpu && !hfpu) {
       println("\n   ~*** " + Seq("One","Two","Three","Four")(DECODE_WIDTH-1) + "-wide Machine ***~\n")
-      println("    -== " + Seq("Single","Dual","Triple","Quad","Five","Six")(totalIssueWidth-1) + " Issue ==- \n")
+      println("    -== " + Seq("Single","Dual","Triple","Quad","Five","Six","Seven","Eight","Nine")(totalIssueWidth-1) + " Issue ==- \n")
    }
 
 
@@ -89,6 +89,24 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
       exe_units.find(_.has_ifpu).get
    }
 
+   lazy val ihfpu_unit =
+   {
+      require (exe_units.count(_.has_ihfpu) == 1)
+      exe_units.find(_.has_ihfpu).get
+   }
+
+   lazy val hfpfpu_unit =
+   {
+      require (exe_units.count(_.has_hfpfpu) == 1)
+      exe_units.find(_.has_hfpfpu).get
+   }
+
+   lazy val fphfpu_unit =
+   {
+      require (exe_units.count(_.has_fphfpu) == 1)
+      exe_units.find(_.has_fphfpu).get
+   }
+
    lazy val br_unit_io =
    {
       require (exe_units.count(_.hasBranchUnit) == 1)
@@ -102,7 +120,7 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
 
 
 
-   if (!fpu) {
+   if (!fpu && !hfpu) {
       val int_width = issueParams.find(_.iqType == IQT_INT.litValue).get.issueWidth
       exe_units += Module(new MemExeUnit())
       exe_units += Module(new ALUExeUnit(is_branch_unit      = true
@@ -114,18 +132,20 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
                                           ))
       for (w <- 0 until int_width-1) {
          val is_last = w == (int_width-2)
-         exe_units += Module(new ALUExeUnit(has_ifpu = is_last))
+         exe_units += Module(new ALUExeUnit(has_ifpu = is_last, has_ihfpu = is_last))
       }
-   } else if(hfpu){
+      //exe_units += Module(new ALUExeUnit(has_ihfpu=true))
+   } else if(hfpu && !fpu){
       require (usingHFPU)
       val fp_width = issueParams.find(_.iqType == IQT_HFP.litValue).get.issueWidth
       require (fp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.
-      for (w <- 0 until fp_width) {
-         exe_units += Module(new FPUExeUnit(has_fpu = true,
-                                            has_fdiv = usingFDivSqrt && (w==0),
-                                            has_fpiu = (w==0)))
+      for (w <- 0 until fp_width - 2) {
+         exe_units += Module(new HFPUExeUnit(has_hfpu = true,
+                                             has_hfdiv = usingFDivSqrt && (w==0)))
+                                             // default using hfpiu/fhpfpu in FHPU
       }
       exe_units += Module(new IntToFPExeUnit())
+      exe_units += Module(new FPToHFPExeUnit())
    }else {
       require (usingFPU)
       val fp_width = issueParams.find(_.iqType == IQT_FP.litValue).get.issueWidth
@@ -136,6 +156,7 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
                                             has_fpiu = (w==0)))
       }
       exe_units += Module(new IntToFPExeUnit())
+      //exe_units += Module(new FPUExeUnit(has_fphfpu=true)) // ?? Why -- Jecy
    }
 
 
@@ -144,7 +165,7 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
    require (exe_units.map(_.is_mem_unit).reduce(_|_) || fpu, "Datapath is missing a memory unit.")
    require (exe_units.map(_.has_mul).reduce(_|_) || fpu, "Datapath is missing a multiplier.")
    require (exe_units.map(_.has_div).reduce(_|_) || fpu, "Datapath is missing a divider.")
-   require (exe_units.map(_.has_fpu).reduce(_|_) == usingFPU || !fpu, "Datapath is missing a fpu (or has an fpu and shouldnt).")
+   //require (exe_units.map(_.has_fpu).reduce(_|_) == usingFPU || !fpu, "Datapath is missing a fpu (or has an fpu and shouldnt).") // We may have a hfpu other than a fpu --  Jecy
 
    val num_rf_read_ports = exe_units.map(_.num_rf_read_ports).reduce[Int](_+_)
    val num_rf_write_ports = exe_units.map(_.num_rf_write_ports).reduce[Int](_+_)
@@ -160,7 +181,7 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
    val num_fpu_ports = exe_units.withFilter(_.hasFFlags).map(_.num_rf_write_ports).foldLeft(0)(_+_)
 
    val bypassable_write_port_mask = {
-      if (fpu)
+      if (fpu || hfpu)
       {
          // NOTE: hack for the long latency load pipe which is write_port(0) and doesn't support bypassing.
          val mask = Seq(false) ++ exe_units.withFilter(_.uses_iss_unit).map(_.isBypassable)

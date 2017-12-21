@@ -118,6 +118,10 @@ class RegisterFileBehavorial(
    // But since these bypasses are expensive, and not all write ports need to bypass their data,
    // only perform the w->r bypass on a select number of write ports.
 
+   //assert( bypassable_array.length == 1 , "byapssable_array.length != 1")
+   //assert( io.write_ports.length == 1 , "io.write_ports.length != 1")
+   // bypassable_array.length =1 fpu
+   // io.write_ports.length =1 fpu
    require (bypassable_array.length == io.write_ports.length)
 
    if (bypassable_array.reduce(_||_))
