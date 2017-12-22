@@ -105,7 +105,7 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
    def numBypassPorts: Int = num_bypass_stages
    def hasBranchUnit : Boolean = is_branch_unit
    def isBypassable  : Boolean = bypassable
-   def hasFFlags     : Boolean = has_fpu || has_fdiv || has_hfpu
+   def hasFFlags     : Boolean = has_fpu || has_fdiv || has_hfpu || has_hfdiv
    def usesFRF       : Boolean = (has_fpu || has_fdiv) && !(has_alu || has_mul)
    def usesIRF       : Boolean = !(has_fpu || has_fdiv || has_hfpu) && (has_alu || has_mul || is_mem_unit || has_ifpu || has_ihfpu)
 
@@ -510,17 +510,18 @@ class HFPUExeUnit(
    io.resp(1).bits.writesToIRF = true
    io.resp(1).bits.writesToFRF = true
 
-   // FPU Unit -----------------------
-   var fpu: FPUUnit = null
+   // HFPU Unit -----------------------
+   var fpu: HFPUUnit = null
    val fpu_resp_val = Wire(init=Bool(false))
    val fpu_resp_fflags = Wire(new ValidIO(new FFlagsResp()))
    fpu_resp_fflags.valid := Bool(false)
    if (has_hfpu)
    {
-      fpu = Module(new FPUUnit())
+      fpu = Module(new HFPUUnit())
       fpu.io.req.valid           := io.req.valid &&
-                                    (io.req.bits.uop.fu_code_is(FU_FPU) ||
-                                    io.req.bits.uop.fu_code_is(FU_F2I)) // TODO move to using a separate unit
+                                    (io.req.bits.uop.fu_code_is(FU_HFPU) ||
+                                    io.req.bits.uop.fu_code_is(FU_HF2I)  || // TODO move to using a separate unit
+                                    io.req.bits.uop.fu_code_is(FU_HF2F))    // TODO move to using a separete unit ?? -- Jecy
       fpu.io.req.bits.uop        := io.req.bits.uop
       fpu.io.req.bits.rs1_data   := io.req.bits.rs1_data
       fpu.io.req.bits.rs2_data   := io.req.bits.rs2_data
@@ -534,8 +535,8 @@ class HFPUExeUnit(
    }
 
 
-   // FDiv/FSqrt Unit -----------------------
-   var fdivsqrt: FDivSqrtUnit = null
+   // HFDiv/HFSqrt Unit -----------------------
+   var fdivsqrt: HFDivSqrtUnit = null
    val fdiv_resp_val = Wire(init=Bool(false))
    val fdiv_resp_uop = Wire(new MicroOp())
    val fdiv_resp_data = Wire(Bits(width=65))
@@ -543,8 +544,8 @@ class HFPUExeUnit(
    fdiv_resp_fflags.valid := Bool(false)
    if (has_hfdiv)
    {
-      fdivsqrt = Module(new FDivSqrtUnit())
-      fdivsqrt.io.req.valid         := io.req.valid && io.req.bits.uop.fu_code_is(FU_FDV)
+      fdivsqrt = Module(new HFDivSqrtUnit())
+      fdivsqrt.io.req.valid         := io.req.valid && io.req.bits.uop.fu_code_is(FU_HFDV)
       fdivsqrt.io.req.bits.uop      := io.req.bits.uop
       fdivsqrt.io.req.bits.rs1_data := io.req.bits.rs1_data
       fdivsqrt.io.req.bits.rs2_data := io.req.bits.rs2_data
@@ -555,7 +556,7 @@ class HFPUExeUnit(
       // share write port with the pipelined units
       fdivsqrt.io.resp.ready := !(fu_units.map(_.io.resp.valid).reduce(_|_)) // TODO PERF will get blocked by fpiu.
 
-      hfdiv_busy := !fdivsqrt.io.req.ready || (io.req.valid && io.req.bits.uop.fu_code_is(FU_FDV))
+      hfdiv_busy := !fdivsqrt.io.req.ready || (io.req.valid && io.req.bits.uop.fu_code_is(FU_HFDV))
 
       fdiv_resp_val := fdivsqrt.io.resp.valid
       fdiv_resp_uop := fdivsqrt.io.resp.bits.uop
@@ -568,7 +569,7 @@ class HFPUExeUnit(
    // Outputs (Write Port #0)  ---------------
 
    io.resp(0).valid    := fu_units.map(_.io.resp.valid).reduce(_|_) &&
-                          !(fpu.io.resp.valid && fpu.io.resp.bits.uop.fu_code_is(FU_F2I))
+                          !(fpu.io.resp.valid && fpu.io.resp.bits.uop.fu_code_is(FU_HF2I) && fpu.io.resp.bits.uop.fu_code_is(FU_HF2F))
    io.resp(0).bits.uop := new MicroOp().fromBits(
                            PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.uop.asUInt))))
    io.resp(0).bits.data:= PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.data.asUInt))).asUInt
@@ -679,23 +680,23 @@ class FPToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
    uses_iss_unit = false)
 {
    println ("     ExeUnit--")
-   println ("       - IntToFP")
+   println ("       - FPToHFP")
    val busy = Wire(init=Bool(false))
-   io.fu_types := Mux(!busy, FU_I2F, Bits(0))
+   io.fu_types := Mux(!busy, FU_F2HF, Bits(0))
    io.resp(0).bits.writesToIRF = false
 
-   val ifpu = Module(new IntToFPUnit())
-   ifpu.io.req <> io.req
-   ifpu.io.fcsr_rm := io.fcsr_rm
-   ifpu.io.brinfo <> io.brinfo
-   io.bypass <> ifpu.io.bypass
+   val fphfpu = Module(new FPToHFPUnit())
+   fphfpu.io.req <> io.req
+   fphfpu.io.fcsr_rm := io.fcsr_rm
+   fphfpu.io.brinfo <> io.brinfo
+   io.bypass <> fphfpu.io.bypass
 
    // buffer up results since we share write-port on integer regfile.
    val queue = Module(new QueueForMicroOpWithData(entries = p(BoomKey).intToFpLatency + 3, data_width)) // TODO being overly conservative
-   queue.io.enq.valid       := ifpu.io.resp.valid
-   queue.io.enq.bits.uop    := ifpu.io.resp.bits.uop
-   queue.io.enq.bits.data   := ifpu.io.resp.bits.data
-   queue.io.enq.bits.fflags := ifpu.io.resp.bits.fflags
+   queue.io.enq.valid       := fphfpu.io.resp.valid
+   queue.io.enq.bits.uop    := fphfpu.io.resp.bits.uop
+   queue.io.enq.bits.data   := fphfpu.io.resp.bits.data
+   queue.io.enq.bits.fflags := fphfpu.io.resp.bits.fflags
    queue.io.brinfo := io.brinfo
    queue.io.flush := io.req.bits.kill
 
@@ -725,18 +726,18 @@ class IntToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
    io.fu_types := Mux(!busy, FU_I2HF, Bits(0))
    io.resp(0).bits.writesToIRF = false
 
-   val ifpu = Module(new IntToFPUnit())
-   ifpu.io.req <> io.req
-   ifpu.io.fcsr_rm := io.fcsr_rm
-   ifpu.io.brinfo <> io.brinfo
-   io.bypass <> ifpu.io.bypass
+   val ihfpu = Module(new IntToHFPUnit())
+   ihfpu.io.req <> io.req
+   ihfpu.io.fcsr_rm := io.fcsr_rm
+   ihfpu.io.brinfo <> io.brinfo
+   io.bypass <> ihfpu.io.bypass
 
    // buffer up results since we share write-port on integer regfile.
    val queue = Module(new QueueForMicroOpWithData(entries = p(BoomKey).intToFpLatency + 3, data_width)) // TODO being overly conservative
-   queue.io.enq.valid       := ifpu.io.resp.valid
-   queue.io.enq.bits.uop    := ifpu.io.resp.bits.uop
-   queue.io.enq.bits.data   := ifpu.io.resp.bits.data
-   queue.io.enq.bits.fflags := ifpu.io.resp.bits.fflags
+   queue.io.enq.valid       := ihfpu.io.resp.valid
+   queue.io.enq.bits.uop    := ihfpu.io.resp.bits.uop
+   queue.io.enq.bits.data   := ihfpu.io.resp.bits.data
+   queue.io.enq.bits.fflags := ihfpu.io.resp.bits.fflags
    queue.io.brinfo := io.brinfo
    queue.io.flush := io.req.bits.kill
 

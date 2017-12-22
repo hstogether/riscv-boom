@@ -679,6 +679,24 @@ class FPUUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    io.resp.bits.fflags.bits.flags := fpu.io.resp.bits.fflags.bits.flags // kill me now
 }
 
+// currently, bypassing is unsupported!
+// All HFP instructions are padded out to the max latency unit for easy
+// write-port scheduling.
+class HFPUUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
+   num_stages = p(tile.TileKey).core.fpu.get.dfmaLatency,
+   num_bypass_stages = 0,
+   earliest_bypass_stage = 0,
+   data_width = 65)(p)
+{
+   val fpu = Module(new HFPU())
+   fpu.io.req <> io.req
+   fpu.io.req.bits.fcsr_rm := io.fcsr_rm
+
+   io.resp.bits.data              := fpu.io.resp.bits.data
+   io.resp.bits.fflags.valid      := fpu.io.resp.bits.fflags.valid
+   io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
+   io.resp.bits.fflags.bits.flags := fpu.io.resp.bits.fflags.bits.flags // kill me now
+}
 
 class IntToFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    num_stages = p(BoomKey).intToFpLatency,
@@ -739,6 +757,40 @@ class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
       "[func] Only support fromInt micro-ops.")
 
    val ifpu = Module(new tile.IntToFP(intToFpLatency))
+   ifpu.io.in.valid := io.req.valid
+   ifpu.io.in.bits := req
+
+   io.resp.bits.data              := ifpu.io.out.bits.data
+   io.resp.bits.fflags.valid      := ifpu.io.out.valid
+   io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
+   io.resp.bits.fflags.bits.flags := ifpu.io.out.bits.exc
+}
+
+class FPToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
+   num_stages = p(BoomKey).intToFpLatency,
+   num_bypass_stages = 0,
+   earliest_bypass_stage = 0,
+   data_width = 65)(p)
+{
+   val fp_decoder = Module(new UOPCodeHFPUDecoder) // TODO use a simpler decoder
+   val io_req = io.req.bits
+   fp_decoder.io.uopc := io_req.uop.uopc
+   val fp_ctrl = fp_decoder.io.sigs
+   val fp_rm = Mux(ImmGenRm(io_req.uop.imm_packed) === Bits(7), io.fcsr_rm, ImmGenRm(io_req.uop.imm_packed))
+   val req = Wire(new tile.FPInput)
+   req := fp_ctrl
+   req.rm := fp_rm
+   req.in1 := io_req.rs1_data
+   req.in2 := io_req.rs2_data
+   req.typ := ImmGenTyp(io_req.uop.imm_packed)
+
+   assert (!(io.req.valid && fp_ctrl.fromint && req.in1(64).toBool),
+      "[func] IntToFP integer input has 65th high-order bit set!")
+
+   assert (!(io.req.valid && !fp_ctrl.fromint),
+      "[func] Only support fromInt micro-ops.")
+
+   val ifpu = Module(new tile.FPToHFP(intToFpLatency))
    ifpu.io.in.valid := io.req.valid
    ifpu.io.in.bits := req
 
