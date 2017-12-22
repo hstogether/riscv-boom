@@ -535,7 +535,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
    // Output (Issue)
 
-   val ifpu_idx = exe_units.length-2 // TODO hack; need more disciplined manner to hook up ifpu
+   val ifpu_idx = exe_units.length-1 // TODO hack; need more disciplined manner to hook up ifpu
    require (exe_units(ifpu_idx).supportedFuncUnits.ifpu)
    val ihfpu_idx = exe_units.length-1 // TODO hack; need more disciplined manner to hook up ifpu
    require (exe_units(ihfpu_idx).supportedFuncUnits.ihfpu)
@@ -706,6 +706,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    fp_pipeline.io.brinfo := br_unit.brinfo
    hfp_pipeline.io.brinfo := br_unit.brinfo
 
+   hfp_pipeline.io.fromfp := fp_pipeline.io.tohfp
 
    //-------------------------------------------------------------
    //-------------------------------------------------------------

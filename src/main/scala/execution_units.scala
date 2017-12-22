@@ -129,6 +129,7 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
                                           , use_slow_mul     = false
                                           , has_div          = true
                                           , has_ifpu         = int_width==1
+                                          , has_ihfpu        = int_width==1
                                           ))
       for (w <- 0 until int_width-1) {
          val is_last = w == (int_width-2)
@@ -137,14 +138,15 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
       //exe_units += Module(new ALUExeUnit(has_ihfpu=true))
    } else if(hfpu && !fpu){
       require (usingHFPU)
-      val fp_width = issueParams.find(_.iqType == IQT_HFP.litValue).get.issueWidth
-      require (fp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.
-      for (w <- 0 until fp_width - 2) {
+      val hfp_width = issueParams.find(_.iqType == IQT_HFP.litValue).get.issueWidth
+      require (hfp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.
+      for (w <- 0 until hfp_width) {
          exe_units += Module(new HFPUExeUnit(has_hfpu = true,
-                                             has_hfdiv = usingFDivSqrt && (w==0)))
-                                             // default using hfpiu/fhpfpu in FHPU
+                                             has_hfdiv = usingFDivSqrt && (w==0),
+                                             has_hfpiu = (w==0),
+                                             has_hfpfpu = (w==0)))
       }
-      exe_units += Module(new IntToFPExeUnit())
+      exe_units += Module(new IntToHFPExeUnit())
       exe_units += Module(new FPToHFPExeUnit())
    }else {
       require (usingFPU)

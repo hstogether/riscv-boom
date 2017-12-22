@@ -490,7 +490,7 @@ class HFPUExeUnit(
    if (has_hfpu) println ("       - HFPU (Latency: " + dfmaLatency + ")")
    if (has_hfdiv) println ("       - HFDiv/FSqrt")
    if (has_hfpiu) println ("       - HFPIU (writes to Integer RF)")
-   if (has_fphfpu) println ("       - FUHFPU (write to HFPRf)")
+   if (has_hfpfpu) println ("       - HFPFPU (write to FP RF)")
 
    val hfdiv_busy = Wire(init=Bool(false))
    val hfpiu_busy = Wire(init=Bool(false))
@@ -515,7 +515,7 @@ class HFPUExeUnit(
    val fpu_resp_val = Wire(init=Bool(false))
    val fpu_resp_fflags = Wire(new ValidIO(new FFlagsResp()))
    fpu_resp_fflags.valid := Bool(false)
-   if (has_fpu)
+   if (has_hfpu)
    {
       fpu = Module(new FPUUnit())
       fpu.io.req.valid           := io.req.valid &&
@@ -541,7 +541,7 @@ class HFPUExeUnit(
    val fdiv_resp_data = Wire(Bits(width=65))
    val fdiv_resp_fflags = Wire(new ValidIO(new FFlagsResp()))
    fdiv_resp_fflags.valid := Bool(false)
-   if (has_fdiv)
+   if (has_hfdiv)
    {
       fdivsqrt = Module(new FDivSqrtUnit())
       fdivsqrt.io.req.valid         := io.req.valid && io.req.bits.uop.fu_code_is(FU_FDV)
@@ -669,7 +669,7 @@ class IntToFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
 }
 
 class FPToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
-   has_ifpu = true,
+   has_fphfpu = true,
    num_rf_read_ports = 2,
    num_rf_write_ports = 1,
    num_bypass_stages = 0,
@@ -710,7 +710,7 @@ class FPToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
 
 
 class IntToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
-   has_ifpu = true,
+   has_ihfpu = true,
    num_rf_read_ports = 2,
    num_rf_write_ports = 1,
    num_bypass_stages = 0,

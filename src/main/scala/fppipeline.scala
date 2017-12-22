@@ -40,10 +40,10 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
       // +1 for recoding.
       val ll_wport         = Valid(new ExeUnitResp(fLen+1)).flip // from memory unit
       val fromint          = Valid(new FuncUnitReq(fLen+1)).flip // from integer RF
-      val fromhfp          = Decoupled(new ExeUnitResp(fLen+1))  // from HF2F
+      val fromhfp          = Decoupled(new ExeUnitResp(fLen+1)).flip  // from HF2F
       val tosdq            = Valid(new MicroOpWithData(fLen))    // to Load/Store Unit
       val toint            = Decoupled(new ExeUnitResp(xLen))    // to integer RF
-      val tohfp            = Valid(new FuncUnitReq(fLen+1)).flip // to F2HF
+      val tohfp            = Valid(new FuncUnitReq(fLen+1)) // to F2HF
 
       val wakeups          = Vec(num_wakeup_ports, Valid(new ExeUnitResp(fLen+1)))
       val wb_valids        = Vec(num_wakeup_ports, Bool()).asInput
