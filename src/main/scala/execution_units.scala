@@ -156,16 +156,16 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
                                             has_fpiu = (w==0)))
       }
       exe_units += Module(new IntToFPExeUnit())
-      //exe_units += Module(new FPUExeUnit(has_fphfpu=true)) // ?? Why -- Jecy
    }
 
 
    require (exe_units.length != 0)
    // if this is for FPU units, we don't need a memory unit (or other integer units)..
-   require (exe_units.map(_.is_mem_unit).reduce(_|_) || fpu, "Datapath is missing a memory unit.")
-   require (exe_units.map(_.has_mul).reduce(_|_) || fpu, "Datapath is missing a multiplier.")
-   require (exe_units.map(_.has_div).reduce(_|_) || fpu, "Datapath is missing a divider.")
-   //require (exe_units.map(_.has_fpu).reduce(_|_) == usingFPU || !fpu, "Datapath is missing a fpu (or has an fpu and shouldnt).") // We may have a hfpu other than a fpu --  Jecy
+   require (exe_units.map(_.is_mem_unit).reduce(_|_) || fpu || hfpu, "Datapath is missing a memory unit.")
+   require (exe_units.map(_.has_mul).reduce(_|_) || fpu || hfpu, "Datapath is missing a multiplier.")
+   require (exe_units.map(_.has_div).reduce(_|_) || fpu || hfpu, "Datapath is missing a divider.")
+   require ((exe_units.map(_.has_fpu).reduce(_|_) == usingFPU || !fpu) ||
+            (exe_units.map(_.has_hfpu).reduce(_|_) == usingHFPU || !hfpu), "Datapath is missing a fpu (or has an fpu and shouldnt).") // We may have a hfpu other than a fpu --  Jecy
 
    val num_rf_read_ports = exe_units.map(_.num_rf_read_ports).reduce[Int](_+_)
    val num_rf_write_ports = exe_units.map(_.num_rf_write_ports).reduce[Int](_+_)
@@ -180,12 +180,15 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
    // TODO bug, this can return too many fflag ports,e.g., the FPU is shared with the mem unit and thus has two wb ports
    val num_fpu_ports = exe_units.withFilter(_.hasFFlags).map(_.num_rf_write_ports).foldLeft(0)(_+_)
 
+   require (!(fpu && hfpu))
    val bypassable_write_port_mask = {
       if (fpu || hfpu)
       {
          // NOTE: hack for the long latency load pipe which is write_port(0) and doesn't support bypassing.
          val mask = Seq(false) ++ exe_units.withFilter(_.uses_iss_unit).map(_.isBypassable)
          require (!mask.reduce(_||_)) // don't support any bypassing in FP
+         //require(exe_units.length == 2)
+         //require(mask.length == 2)
          mask
       }
       else

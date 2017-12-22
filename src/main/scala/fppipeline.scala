@@ -250,7 +250,7 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
             assert(!(wbresp.valid && !toint))
             assert(!toint_found) // only support one toint connector
             toint_found = true
-         } else if (eu.has_ifpu || eu.has_hfpfpu) {
+         } else if (eu.has_ifpu) {
             // share with ll unit
          } else {
             assert (!(wbresp.valid && toint))
@@ -273,7 +273,7 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
             !toint),
             "[fppipeline] A writeback is being attempted to the FP RF with dst != FP type.")
 
-         if (!wbresp.bits.writesToIRF && !(eu.has_ifpu || eu.has_hfpfpu)) w_cnt += 1
+         if (!wbresp.bits.writesToIRF && !eu.has_ifpu) w_cnt += 1
       }
    }
    require (w_cnt == fregfile.io.write_ports.length)

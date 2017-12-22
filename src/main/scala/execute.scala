@@ -32,7 +32,6 @@ class ExeUnitResp(data_width: Int)(implicit p: Parameters) extends BoomBundle()(
    val fflags = new ValidIO(new FFlagsResp) // write fflags to ROB
 
    var writesToIRF = true // does this response unit plug into the integer regfile?
-   var writesToHFRF = true
    var writesToFRF  = true
    override def cloneType: this.type = new ExeUnitResp(data_width).asInstanceOf[this.type]
 }
@@ -346,8 +345,7 @@ class ALUExeUnit(
 class FPUExeUnit(
    has_fpu  : Boolean = true,
    has_fdiv : Boolean = false,
-   has_fpiu : Boolean = false,
-   has_fphfpu: Boolean = false
+   has_fpiu : Boolean = false
    )
    (implicit p: Parameters)
    extends ExecutionUnit(
@@ -359,33 +357,27 @@ class FPUExeUnit(
       has_alu  = false,
       has_fpu  = has_fpu,
       has_fdiv = has_fdiv,
-      has_fpiu = has_fpiu,
-      has_fphfpu=has_fphfpu)(p)
+      has_fpiu = has_fpiu)(p)
 {
    println ("     ExeUnit--")
    if (has_fpu) println ("       - FPU (Latency: " + dfmaLatency + ")")
    if (has_fdiv) println ("       - FDiv/FSqrt")
    if (has_fpiu) println ("       - FPIU (writes to Integer RF)")
-   if (has_fphfpu) println ("       - FUHFPU (write to HFPRf)")
 
    val fdiv_busy = Wire(init=Bool(false))
    val fpiu_busy = Wire(init=Bool(false))
-   val fphfpu_busy= Wire(init=Bool(false))
 
    // The Functional Units --------------------
    val fu_units = ArrayBuffer[FunctionalUnit]()
 
    io.fu_types := Mux(Bool(has_fpu), FU_FPU, Bits(0)) |
                   Mux(!fdiv_busy && Bool(has_fdiv), FU_FDV, Bits(0)) |
-                  Mux(!fpiu_busy && Bool(has_fpiu), FU_F2I, Bits(0)) |
-                  Mux(!fphfpu_busy && Bool(has_fphfpu), FU_F2HF, Bits(0))
+                  Mux(!fpiu_busy && Bool(has_fpiu), FU_F2I, Bits(0))
 
 
    io.resp(0).bits.writesToIRF = false
-   io.resp(0).bits.writesToHFRF = false
    io.resp(0).bits.writesToFRF = false
-   io.resp(1).bits.writesToIRF = true
-   io.resp(1).bits.writesToHFRF = true
+   io.resp(1).bits.writesToIRF = true  // always open ??  -- Jecy
    io.resp(1).bits.writesToFRF = false
 
    // FPU Unit -----------------------
@@ -453,11 +445,9 @@ class FPUExeUnit(
    io.resp(0).bits.fflags := Mux(fpu_resp_val, fpu_resp_fflags, fdiv_resp_fflags)
 
    // Outputs (Write Port #1) -- FpToInt Queuing Unit -----------------------
-   if(io.req.bits.uop.fu_code_is(FU_F2I)==true){
-      io.resp(1).bits.writesToHFRF = false
-   } else {
-      io.resp(1).bits.writesToIRF = false
-   }
+   //if(io.req.bits.uop.fu_code_is(FU_F2I)==true){
+   //   io.resp(1).bits.writesToIRF = true
+   //}
 
    // TODO instantiate our own fpiu; and remove it from fpu.scala.
 
@@ -472,7 +462,6 @@ class FPUExeUnit(
    io.resp(1) <> queue.io.deq
 
    fpiu_busy := !(queue.io.empty)
-   fphfpu_busy := !(queue.io.empty)
 
    assert (queue.io.enq.ready) // If this backs up, we've miscalculated the size of the queue.
 }
@@ -517,10 +506,8 @@ class HFPUExeUnit(
 
 
    io.resp(0).bits.writesToIRF = false
-   io.resp(0).bits.writesToHFRF = false
    io.resp(0).bits.writesToFRF = false
    io.resp(1).bits.writesToIRF = true
-   io.resp(1).bits.writesToHFRF = false
    io.resp(1).bits.writesToFRF = true
 
    // FPU Unit -----------------------
