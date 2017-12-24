@@ -299,9 +299,9 @@ trait ScalarOpConstants
    val uopFMSUB_D   = UInt(115,UOPC_SZ)
    val uopFNMADD_D  = UInt(116,UOPC_SZ)
    val uopFNMSUB_D  = UInt(117,UOPC_SZ)
-   val uopFMADD_H   = UInt(144,UOPC_SZ)
-   val uopFMSUB_H   = UInt(145,UOPC_SZ)
-   val uopFNMADD_H  = UInt(146,UOPC_SZ)
+   val uopFMADD_H   = UInt(152,UOPC_SZ)
+   val uopFMSUB_H   = UInt(153,UOPC_SZ)
+   val uopFNMADD_H  = UInt(156,UOPC_SZ)
    val uopFNMSUB_H  = UInt(147,UOPC_SZ)
 
    val uopFDIV_S    = UInt(118,UOPC_SZ)
