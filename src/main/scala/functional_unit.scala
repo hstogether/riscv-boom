@@ -756,7 +756,7 @@ class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    assert (!(io.req.valid && !hfp_ctrl.fromint),
       "[func] Only support fromInt micro-ops.")
 
-   val ifhpu = Module(new tile.IntToFP(intToFpLatency)) // TODO: Using intToHfpLatency -- Jecy
+   val ihfpu = Module(new tile.IntToFP(intToFpLatency)) // TODO: Using intToHfpLatency -- Jecy
    ihfpu.io.in.valid := io.req.valid
    ihfpu.io.in.bits := req
 
@@ -792,7 +792,7 @@ class FPToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
 
    val fphfpu = Module(new tile.FPToHFP(intToFpLatency)) // TODO: using fpToHfpLatency -- Jecy
    fphfpu.io.in.valid := io.req.valid
-   fpfpu.io.in.bits := req
+   fphfpu.io.in.bits := req
 
    io.resp.bits.data              := fphfpu.io.out.bits.data
    io.resp.bits.fflags.valid      := fphfpu.io.out.valid

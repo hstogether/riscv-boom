@@ -260,7 +260,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
             assert(!tofp_found)
             tofp_found=true
          } else {
-            assert (!(wbresp.valid && toint))
+            assert (!(wbresp.valid && (toint || tofp)))
             fregfile.io.write_ports(w_cnt).valid :=
                wbresp.valid &&
                wbresp.bits.uop.ctrl.rf_wen
@@ -280,7 +280,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
             !toint),
             "[fppipeline] A writeback is being attempted to the FP RF with dst != FP type.")
 
-         if (!wbresp.bits.writesToIRF && !(eu.has_ifpu || eu.has_fphfpu) && !wbresp.bits.writesToFRF) w_cnt += 1
+         if (!wbresp.bits.writesToIRF && !(eu.has_ihfpu || eu.has_fphfpu) && !wbresp.bits.writesToFRF) w_cnt += 1
       }
    }
    require (w_cnt == fregfile.io.write_ports.length)
@@ -302,7 +302,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       {
          val wb_uop = exe_resp.bits.uop
 
-         if (!exe_resp.bits.writesToIRF && !(eu.has_ifpu || eu.has_fphfpu) && !exe_resp.bits.writesToFRF) {
+         if (!exe_resp.bits.writesToIRF && !(eu.has_ihfpu || eu.has_fphfpu) && !exe_resp.bits.writesToFRF) {
             val wport = io.wakeups(w_cnt)
             wport <> exe_resp
             wport.valid := exe_resp.valid && wb_uop.dst_rtype === RT_FHT

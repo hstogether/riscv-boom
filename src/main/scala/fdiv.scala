@@ -33,27 +33,28 @@ class UOPCodeFDivDecoder extends Module
    val decoder = rocket.DecodeLogic(io.uopc,
       // Note: not all of these signals are used or necessary, but we're
       // constrained by the need to fit the rocket.FPU units' ctrl signals.
-      //                                                    swap12         div
-      //                                                    | swap32       | sqrt
-      //                            cmd                     | | single     | | round
-      //                            |            ldst       | | | fromint  | | | wflags
-      //                            |            | wen      | | | | toint  | | | |
-      //                            |            | | ren1   | | | | | fastpipe | |
-      //                            |            | | | ren2 | | | | | | fma| | | |
-      //                            |            | | | | ren3 | | | | | |  | | | |
-      //                            |            | | | | |  | | | | | | |  | | | |
-      /* Default */            List(FCMD_X,      X,X,X,X,X, X,X,X,X,X,X,X, X,X,X,X),
+      //                                                    swap13          fromhfp
+      //                                                    | swap32        | tohfp
+      //                            cmd                     | | single      | | fastpipe
+      //                            |            ldst       | | | half      | | | fma
+      //                            |            | wen      | | | | fromint | | | |  div
+      //                            |            | | ren1   | | | | | toint | | | |  | sqrt
+      //                            |            | | | ren2 | | | | | | fromfp| | |  | | round
+      //                            |            | | | | ren3 | | | | | | tofp| | |  | | | wflags
+      //                            |            | | | | |  | | | | | | | | | | | |  | | | |
+      /* Default */            List(FCMD_X,      X,X,X,X,X, X,X,X,N,X,X,X,X,X,X,X,X, X,X,X,X),
       Array(
-         BitPat(uopFDIV_S)  -> List(FCMD_DIV,    X,X,Y,Y,X, X,X,Y,X,X,X,X, Y,N,Y,Y),
-         BitPat(uopFDIV_D)  -> List(FCMD_DIV,    X,X,Y,Y,X, X,X,N,X,X,X,X, Y,N,Y,Y),
-         BitPat(uopFSQRT_S) -> List(FCMD_SQRT,   X,X,Y,N,X, X,X,Y,X,X,X,X, N,Y,Y,Y),
-         BitPat(uopFSQRT_D) -> List(FCMD_SQRT,   X,X,Y,N,X, X,X,N,X,X,X,X, N,Y,Y,Y)
+         BitPat(uopFDIV_S)  -> List(FCMD_DIV,    X,X,Y,Y,X, X,X,Y,N,X,X,X,X,X,X,X,X, Y,N,Y,Y),
+         BitPat(uopFDIV_D)  -> List(FCMD_DIV,    X,X,Y,Y,X, X,X,N,N,X,X,X,X,X,X,X,X, Y,N,Y,Y),
+         BitPat(uopFSQRT_S) -> List(FCMD_SQRT,   X,X,Y,N,X, X,X,Y,N,X,X,X,X,X,X,X,X, N,Y,Y,Y),
+         BitPat(uopFSQRT_D) -> List(FCMD_SQRT,   X,X,Y,N,X, X,X,N,N,X,X,X,X,X,X,X,X, N,Y,Y,Y)
       ))
 
    val s = io.sigs
    val sigs = Seq(s.cmd, s.ldst, s.wen, s.ren1, s.ren2, s.ren3, s.swap12,
-                  s.swap23, s.single, s.fromint, s.toint, s.fastpipe, s.fma,
-                  s.div, s.sqrt, s.round, s.wflags)
+                  s.swap23, s.single, s.half, s.fromint, s.toint, s.fromfp, s.tofp,
+                  s.fromhfp, s.tohfp, s.fastpipe, s.fma, s.div, s.sqrt, s.round,
+                  s.wflags)
    sigs zip decoder map {case(s,d) => s := d}
 }
 
