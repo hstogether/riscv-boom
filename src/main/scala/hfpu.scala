@@ -139,8 +139,6 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
    hfpiu_result.data := hfpiu_out.bits.toint
    hfpiu_result.exc  := hfpiu_out.bits.exc
 
-   val hfpfu = Module(new tile.HFPToFp)
-
    // Modify to work for HFP
    val hfpmu = Module(new tile.HFPToFP(hfpu_latency)) // latency 2 for rocket
    hfpmu.io.in.valid := io.req.valid && hfp_ctrl.fastpipe
@@ -152,8 +150,8 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
                     hfpmu.io.out.valid ||
                     hfma.io.out.valid
    val hfpu_out   = Mux(hfma.io.out.valid, hfma.io.out.bits,
-                   Mux(hfpiu_out.valid,    hfpiu_result,
-                                          hfpmu.io.out.bits))
+                                           Mux(hfpiu_out.valid,   hfpiu_result,
+                                                                  hfpmu.io.out.bits))
 
    io.resp.bits.data              := hfpu_out.data
    io.resp.bits.fflags.valid      := io.resp.valid
