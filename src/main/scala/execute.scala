@@ -32,7 +32,7 @@ class ExeUnitResp(data_width: Int)(implicit p: Parameters) extends BoomBundle()(
    val fflags = new ValidIO(new FFlagsResp) // write fflags to ROB
 
    var writesToIRF = true // does this response unit plug into the integer regfile?
-   var writesToFRF  = true
+   var writesToFRF = true 
    override def cloneType: this.type = new ExeUnitResp(data_width).asInstanceOf[this.type]
 }
 
@@ -445,6 +445,7 @@ class FPUExeUnit(
    io.resp(0).bits.fflags := Mux(fpu_resp_val, fpu_resp_fflags, fdiv_resp_fflags)
 
    // Outputs (Write Port #1) -- FpToInt Queuing Unit -----------------------
+   //io.resp(1).bits.writesToIRF = io.req.bits.uop.fu_code_is(FU_F2I) == true
    //if(io.req.bits.uop.fu_code_is(FU_F2I)==true){
    //   io.resp(1).bits.writesToIRF = true
    //}
@@ -460,6 +461,7 @@ class FPUExeUnit(
    queue.io.brinfo          := io.brinfo
    queue.io.flush           := io.req.bits.kill
    io.resp(1) <> queue.io.deq
+   //io.resp(1).bits.writesToIRF = queue.io.deq.bits.uop.fu_code == FU_F2I
 
    fpiu_busy := !(queue.io.empty)
 
@@ -595,6 +597,8 @@ class HFPUExeUnit(
    queue.io.brinfo          := io.brinfo
    queue.io.flush           := io.req.bits.kill
    io.resp(1) <> queue.io.deq
+   //io.resp(1).bits.writesToIRF = queue.io.deq.bits.uop.fu_code == FU_HF2I
+   //io.resp(1).bits.writesToFRF = queue.io.deq.bits.uop.fu_code == FU_HF2F
 
    hfpiu_busy := !(queue.io.empty)
    hfpfpu_busy := !(queue.io.empty)
@@ -647,6 +651,7 @@ class IntToFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
    val busy = Wire(init=Bool(false))
    io.fu_types := Mux(!busy, FU_I2F, Bits(0))
    io.resp(0).bits.writesToIRF = false
+   io.resp(0).bits.writesToFRF = false
 
    val ifpu = Module(new IntToFPUnit())
    ifpu.io.req <> io.req

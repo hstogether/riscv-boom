@@ -213,6 +213,7 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
    // Hookup load writeback -- and recode FP values.
    ll_wbarb.io.in(0) <> io.ll_wport
+   assert( !(ll_wbarb.io.in(0).valid) || (ll_wbarb.io.in(0).valid && ll_wbarb.io.in(0).bits.uop.dst_rtype === RT_FLT))
    val typ = io.ll_wport.bits.uop.mem_typ
    val load_single = typ === rocket.MT_W || typ === rocket.MT_WU
    val rec_s = hardfloat.recFNFromFN( 8, 24, io.ll_wport.bits.data)
@@ -221,7 +222,10 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
    ll_wbarb.io.in(0).bits.data := fp_load_data_recoded
 
    ll_wbarb.io.in(1) <> ifpu_resp
+   assert( !(ll_wbarb.io.in(1).valid) || (ll_wbarb.io.in(1).valid && ll_wbarb.io.in(1).bits.uop.dst_rtype === RT_FLT))
    ll_wbarb.io.in(2) <> io.fromhfp
+   assert( !(ll_wbarb.io.in(2).valid) || (ll_wbarb.io.in(2).valid && ll_wbarb.io.in(2).bits.uop.dst_rtype === RT_FLT))
+
    if (regreadLatency > 0) {
       // Cut up critical path by delaying the write by a cycle.
       // Wakeup signal is sent on cycle S0, write is now delayed until end of S1,
@@ -246,6 +250,8 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
          val toint = wbresp.bits.uop.dst_rtype === RT_FIX
 
          if (wbresp.bits.writesToIRF) {
+            //assert(wbresp.bits.uop.fu_code_is(FU_F2I))
+            //assert(wbresp.bits.uop.dst_rtype === RT_FIX)
             io.toint <> wbresp
             assert(!(wbresp.valid && !toint))
             assert(!toint_found) // only support one toint connector
@@ -287,6 +293,7 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
    io.wakeups(0) <> ll_wbarb.io.out
    ll_wbarb.io.out.ready := Bool(true)
+   assert( !(io.wakeups(0).valid) || (io.wakeups(0).valid && io.wakeups(0).bits.uop.dst_rtype === RT_FLT))
 
    w_cnt = 1
    for (eu <- exe_units)
@@ -295,10 +302,12 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
       {
          val wb_uop = exe_resp.bits.uop
 
-         if (!exe_resp.bits.writesToIRF && !(eu.has_ifpu || eu.has_hfpfpu)) {
+         if (!exe_resp.bits.writesToIRF && !eu.has_ifpu) {
             val wport = io.wakeups(w_cnt)
             wport <> exe_resp
             wport.valid := exe_resp.valid && wb_uop.dst_rtype === RT_FLT
+
+            assert( !(io.wakeups(w_cnt).valid) || (io.wakeups(w_cnt).valid && io.wakeups(w_cnt).bits.uop.dst_rtype === RT_FLT))
 
             w_cnt += 1
 
@@ -309,6 +318,10 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
       }
    }
 
+   for ( i <- 0 until io.wakeups.length)
+   {
+      assert( !(io.wakeups(i).valid) || (io.wakeups(i).valid && io.wakeups(i).bits.uop.dst_rtype === RT_FLT))
+   }
 
    exe_units.map(_.io.fcsr_rm := io.fcsr_rm)
 

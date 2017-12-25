@@ -220,8 +220,12 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    val hfp_load_data_recoded = Cat(SInt(-1, 48), rec_h)
    ll_wbarb.io.in(0).bits.data := hfp_load_data_recoded
 
-   ll_wbarb.io.in(1) <> ihfpu_resp
-   ll_wbarb.io.in(2) <> fphfpu_resp
+   //ll_wbarb.io.in(1) <> ihfpu_resp
+   //ll_wbarb.io.in(2) <> fphfpu_resp
+   ll_wbarb.io.in(1).valid := ihfpu_resp.valid && ihfpu_resp.bits.uop.dst_rtype === RT_FLT
+   ll_wbarb.io.in(1).bits  := ihfpu_resp.bits
+   ll_wbarb.io.in(2).valid := fphfpu_resp.valid && fphfpu_resp.bits.uop.dst_rtype === RT_FLT
+   ll_wbarb.io.in(2).bits  := fphfpu_resp.bits
    if (regreadLatency > 0) {
       // Cut up critical path by delaying the write by a cycle.
       // Wakeup signal is sent on cycle S0, write is now delayed until end of S1,
@@ -247,18 +251,20 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
          val toint = wbresp.bits.uop.dst_rtype === RT_FIX
          val tofp  = wbresp.bits.uop.dst_rtype === RT_FLT
 
-         if (wbresp.bits.writesToIRF) {
-            io.toint <> wbresp
-            assert(!(wbresp.valid && !toint))
-            assert(!toint_found) // only support one toint connector
-            toint_found = true
+         if (wbresp.bits.writesToIRF || wbresp.bits.writesToFRF) {
+            if(toint == true){
+               io.toint <> wbresp
+               assert(!(wbresp.valid && !toint))
+               assert(!toint_found) // only support one toint connector
+               toint_found = true
+            } else {
+               io.tofp <> wbresp
+               assert(!(wbresp.valid && !tofp))
+               assert(!tofp_found)
+               tofp_found=true
+            }
          } else if (eu.has_ihfpu || eu.has_fphfpu) {
             // share with ll unit
-         } else if (wbresp.bits.writesToFRF){
-            io.tofp <> wbresp
-            assert(!(wbresp.valid && !tofp))
-            assert(!tofp_found)
-            tofp_found=true
          } else {
             assert (!(wbresp.valid && (toint || tofp)))
             fregfile.io.write_ports(w_cnt).valid :=
@@ -315,6 +321,12 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
          }
       }
    }
+
+   for ( i <- 0 until io.wakeups.length)
+   {
+      assert( !(io.wakeups(i).valid) || (io.wakeups(i).valid && io.wakeups(i).bits.uop.dst_rtype === RT_FLT))
+   }
+
 
 
    exe_units.map(_.io.fcsr_rm := io.fcsr_rm)

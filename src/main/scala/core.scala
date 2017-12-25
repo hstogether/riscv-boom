@@ -474,14 +474,26 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       require (exe_units(i).usesIRF)
    }
    require (wu_idx == num_wakeup_ports)
+   for( i <- 0 until int_wakeups.length)
+   {
+      assert( !(int_wakeups(i).valid) || (int_wakeups(i).valid && int_wakeups(i).bits.uop.dst_rtype === RT_FIX))
+   }
 
    for ((renport, intport) <- rename_stage.io.int_wakeups zip int_wakeups)
    {
       renport <> intport
    }
+   for( i <- 0 until fp_pipeline.io.wakeups.length)
+   {
+      assert( !(fp_pipeline.io.wakeups(i).valid) || (fp_pipeline.io.wakeups(i).valid && fp_pipeline.io.wakeups(i).bits.uop.dst_rtype === RT_FLT))
+   }
    for ((renport, fpport) <- rename_stage.io.fp_wakeups zip fp_pipeline.io.wakeups)
    {
       renport <> fpport
+   }
+   for( i <- 0 until hfp_pipeline.io.wakeups.length)
+   {
+      assert( !(hfp_pipeline.io.wakeups(i).valid) || (hfp_pipeline.io.wakeups(i).valid && hfp_pipeline.io.wakeups(i).bits.uop.dst_rtype === RT_FLT))
    }
    for ((renport, hfpport) <- rename_stage.io.hfp_wakeups zip hfp_pipeline.io.wakeups)
    {
@@ -706,7 +718,13 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    fp_pipeline.io.brinfo := br_unit.brinfo
    hfp_pipeline.io.brinfo := br_unit.brinfo
 
+   //fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
+   //fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
+   //                                hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
+
    hfp_pipeline.io.fromfp := fp_pipeline.io.tohfp
+   hfp_pipeline.io.fromfp.valid := fp_pipeline.io.tohfp.valid &&
+                                   fp_pipeline.io.tohfp.bits.uop.fu_code === FUConstants.FU_F2HF
 
    //-------------------------------------------------------------
    //-------------------------------------------------------------
@@ -846,9 +864,18 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    ll_wbarb.io.in(0).bits  := mem_resp.bits
 
    assert (ll_wbarb.io.in(0).ready) // never backpressure the memory unit.
-   ll_wbarb.io.in(1) <> fp_pipeline.io.toint
-   ll_wbarb.io.in(2) <> hfp_pipeline.io.toint
+   //ll_wbarb.io.in(1) <> fp_pipeline.io.toint
+   //ll_wbarb.io.in(2) <> hfp_pipeline.io.toint
+   ll_wbarb.io.in(1).valid := fp_pipeline.io.toint.valid && fp_pipeline.io.toint.bits.uop.dst_rtype === RT_FIX
+   ll_wbarb.io.in(1).bits := fp_pipeline.io.toint.bits
+   ll_wbarb.io.in(2).valid := hfp_pipeline.io.toint.valid && hfp_pipeline.io.toint.bits.uop.dst_rtype === RT_FIX
+   ll_wbarb.io.in(2).bits := hfp_pipeline.io.toint.bits
    iregfile.io.write_ports(llidx) <> WritePort(ll_wbarb.io.out, IPREG_SZ, xLen)
+
+   fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
+   fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
+                                   hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
+
 
 
 
