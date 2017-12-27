@@ -207,7 +207,7 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
    // **** Writeback Stage ****
    //-------------------------------------------------------------
 
-   val ll_wbarb = Module(new Arbiter(new ExeUnitResp(fLen+1), 3))
+   val ll_wbarb = Module(new Arbiter(new ExeUnitResp(fLen+1), 2))
    val ifpu_resp = exe_units.ifpu_unit.io.resp(0)
    //val hfpfpu_resp = io.fromhfp //exe_units.hfpfpu_unit.io.resp(0)
 
@@ -223,8 +223,8 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
    ll_wbarb.io.in(1) <> ifpu_resp
    assert( !(ll_wbarb.io.in(1).valid) || (ll_wbarb.io.in(1).valid && ll_wbarb.io.in(1).bits.uop.dst_rtype === RT_FLT))
-   ll_wbarb.io.in(2) <> io.fromhfp
-   assert( !(ll_wbarb.io.in(2).valid) || (ll_wbarb.io.in(2).valid && ll_wbarb.io.in(2).bits.uop.dst_rtype === RT_FLT))
+   //ll_wbarb.io.in(2) <> io.fromhfp
+   //assert( !(ll_wbarb.io.in(2).valid) || (ll_wbarb.io.in(2).valid && ll_wbarb.io.in(2).bits.uop.dst_rtype === RT_FLT))
 
    if (regreadLatency > 0) {
       // Cut up critical path by delaying the write by a cycle.

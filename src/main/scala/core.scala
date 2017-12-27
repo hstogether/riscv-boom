@@ -103,8 +103,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    val rob              = Module(new Rob(
                                  DECODE_WIDTH,
                                  NUM_ROB_ENTRIES,
-                                 num_irf_write_ports + fp_pipeline.io.wakeups.length + hfp_pipeline.io.wakeups.length,
-                                 exe_units.num_fpu_ports + fp_pipeline.io.wakeups.length + hfp_pipeline.io.wakeups.length))
+                                 num_irf_write_ports + fp_pipeline.io.wakeups.length,// + hfp_pipeline.io.wakeups.length, // TODO: enable HFP
+                                 exe_units.num_fpu_ports + fp_pipeline.io.wakeups.length))// + hfp_pipeline.io.wakeups.length))
    // Used to wakeup registers in rename and issue. ROB needs to listen to something else.
    val int_wakeups      = Wire(Vec(num_wakeup_ports, Valid(new ExeUnitResp(xLen))))
 
@@ -718,6 +718,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    fp_pipeline.io.brinfo := br_unit.brinfo
    hfp_pipeline.io.brinfo := br_unit.brinfo
 
+   //  TODO : enable tofp
    //fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
    //fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
    //                                hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
@@ -769,7 +770,10 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    lsu.io.dmem_is_ordered:= dc_shim.io.core.ordered
 
    lsu.io.fp_stdata <> fp_pipeline.io.tosdq
+   // TODO: enable hfp_sdq
    lsu.io.hfp_stdata <> hfp_pipeline.io.tosdq
+   lsu.io.hfp_stdata.valid := Bool(false)
+
 
 
    //-------------------------------------------------------------
@@ -968,7 +972,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       cnt += 1
       f_cnt += 1
    }
-
+//TODO enable hfp_pipeline
+/*
    for (wakeup <- hfp_pipeline.io.wakeups)
    {
       rob.io.wb_resps(cnt) <> wakeup
@@ -977,8 +982,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       cnt += 1
       f_cnt += 1
    }
+*/
    assert (cnt == rob.num_wakeup_ports)
-
 
    // branch resolution
    rob.io.brinfo <> br_unit.brinfo
