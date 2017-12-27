@@ -220,8 +220,8 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    val hfp_load_data_recoded = Cat(SInt(-1, 48), rec_h)
    ll_wbarb.io.in(0).bits.data := hfp_load_data_recoded
 
-   //ll_wbarb.io.in(1) <> ihfpu_resp
-   //ll_wbarb.io.in(2) <> fphfpu_resp
+   ll_wbarb.io.in(1) <> ihfpu_resp
+   ll_wbarb.io.in(2) <> fphfpu_resp
    ll_wbarb.io.in(1).valid := ihfpu_resp.valid && ihfpu_resp.bits.uop.dst_rtype === RT_FLT
    ll_wbarb.io.in(1).bits  := ihfpu_resp.bits
    ll_wbarb.io.in(2).valid := fphfpu_resp.valid && fphfpu_resp.bits.uop.dst_rtype === RT_FLT

@@ -129,7 +129,6 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
                                           , use_slow_mul     = false
                                           , has_div          = true
                                           , has_ifpu         = int_width==1
-                                          , has_ihfpu        = int_width==1
                                           ))
       for (w <- 0 until int_width-1) {
          val is_last = w == (int_width-2)
