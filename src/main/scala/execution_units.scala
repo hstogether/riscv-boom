@@ -148,6 +148,7 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
       exe_units += Module(new IntToHFPExeUnit())
       exe_units += Module(new FPToHFPExeUnit())
    }else {
+      assert(!hfpu && fpu)
       require (usingFPU)
       val fp_width = issueParams.find(_.iqType == IQT_FP.litValue).get.issueWidth
       require (fp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.

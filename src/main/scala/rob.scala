@@ -704,17 +704,17 @@ class Rob(width: Int,
    {
       // TODO can I relax the ld/st constraint?
       fflags_val(w) := io.commit.valids(w) &&
-                       (io.commit.uops(w).fp_val || io.commit.uops(w).hfp_val) &&
+                       (io.commit.uops(w).fp_val) && //|| io.commit.uops(w).hfp_val) &&
                       !(io.commit.uops(w).is_load || io.commit.uops(w).is_store)
 
       fflags(w) := Mux(fflags_val(w), rob_head_fflags(w), Bits(0))
 
       assert (!(io.commit.valids(w) &&
-               !(io.commit.uops(w).fp_val || io.commit.uops(w).hfp_val) &&
+               !(io.commit.uops(w).fp_val) && //|| io.commit.uops(w).hfp_val) &&
                rob_head_fflags(w) =/= Bits(0)),
                "Committed non-FP instruction has non-zero fflag bits.")
       assert (!(io.commit.valids(w) &&
-               (io.commit.uops(w).fp_val || io.commit.uops(w).hfp_val) &&
+               (io.commit.uops(w).fp_val) && // || io.commit.uops(w).hfp_val) &&
                (io.commit.uops(w).is_load || io.commit.uops(w).is_store) &&
                rob_head_fflags(w) =/= Bits(0)),
                "Committed FP load or store has non-zero fflag bits.")

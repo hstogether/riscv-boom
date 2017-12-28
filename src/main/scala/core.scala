@@ -62,7 +62,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    }
    
    if (usingHFPU) {
-      hfp_pipeline      = Module(new HfpPipeline())
+      //hfp_pipeline      = Module(new HfpPipeline())
    }
    
 
@@ -74,7 +74,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    val dec_serializer   = Module(new FetchSerializerNtoM)
    val decode_units     = for (w <- 0 until DECODE_WIDTH) yield { val d = Module(new DecodeUnit); d }
    val dec_brmask_logic = Module(new BranchMaskGenerationLogic(DECODE_WIDTH))
-   val rename_stage     = Module(new RenameStage(DECODE_WIDTH, num_wakeup_ports, fp_pipeline.io.wakeups.length, hfp_pipeline.io.wakeups.length))
+   val rename_stage     = Module(new RenameStage(DECODE_WIDTH, num_wakeup_ports, fp_pipeline.io.wakeups.length))// hfp_pipeline.io.wakeups.length))
    val issue_units      = new boom.IssueUnits(num_wakeup_ports)
    val iregfile         = if (regreadLatency == 1 && enableCustomRf) {
                               Module(new RegisterFileSeqCustomArray(numIntPhysRegs,
@@ -187,7 +187,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    println("   Num Bypass Ports      : " + exe_units.num_total_bypass_ports)
 
    print(fp_pipeline)
-   print(hfp_pipeline)
+   //print(hfp_pipeline)
 
    println("\n   DCache Ways           : " + dcacheParams.nWays)
    println("   DCache Sets           : " + dcacheParams.nSets)
@@ -415,7 +415,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    //-------------------------------------------------------------
 
    // TODO for now, assume worst-case all instructions will dispatch towards one issue unit.
-   val dis_readys = issue_units.map(_.io.dis_readys.asUInt).reduce(_&_) & fp_pipeline.io.dis_readys.asUInt & hfp_pipeline.io.dis_readys.asUInt
+   val dis_readys = issue_units.map(_.io.dis_readys.asUInt).reduce(_&_) & fp_pipeline.io.dis_readys.asUInt // & hfp_pipeline.io.dis_readys.asUInt // TODO: enable hfp_pipeline
 
    rename_stage.io.dis_inst_can_proceed := dis_readys.toBools
    rename_stage.io.ren_pred_info := Vec(dec_fbundle.uops.map(_.br_prediction))
@@ -491,15 +491,16 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    {
       renport <> fpport
    }
+/*
    for( i <- 0 until hfp_pipeline.io.wakeups.length)
    {
-      assert( !(hfp_pipeline.io.wakeups(i).valid) || (hfp_pipeline.io.wakeups(i).valid && hfp_pipeline.io.wakeups(i).bits.uop.dst_rtype === RT_FLT))
+      assert( !(hfp_pipeline.io.wakeups(i).valid) || (hfp_pipeline.io.wakeups(i).valid && hfp_pipeline.io.wakeups(i).bits.uop.dst_rtype === RT_FHT))
    }
    for ((renport, hfpport) <- rename_stage.io.hfp_wakeups zip hfp_pipeline.io.wakeups)
    {
       renport <> hfpport
    }
-
+*/
    rename_stage.io.com_valids := rob.io.commit.valids
    rename_stage.io.com_uops := rob.io.commit.uops
    rename_stage.io.com_rbk_valids := rob.io.commit.rbk_valids
@@ -542,8 +543,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    fp_pipeline.io.dis_valids <> dis_valids
    fp_pipeline.io.dis_uops <> dis_uops
 
-   hfp_pipeline.io.dis_valids <> dis_valids
-   hfp_pipeline.io.dis_uops <> dis_uops
+   //hfp_pipeline.io.dis_valids <> dis_valids
+   //hfp_pipeline.io.dis_uops <> dis_uops
 
    // Output (Issue)
 
@@ -661,7 +662,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
    exe_units.map(_.io.fcsr_rm := csr.io.fcsr_rm)
    fp_pipeline.io.fcsr_rm := csr.io.fcsr_rm
-   hfp_pipeline.io.fcsr_rm := csr.io.fcsr_rm
+   //hfp_pipeline.io.fcsr_rm := csr.io.fcsr_rm
 
    csr.io.hartid := io.hartid
    csr.io.interrupts := io.interrupts
@@ -707,24 +708,24 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       iregister_read.io.exe_reqs(ifpu_idx).valid &&
       iregister_read.io.exe_reqs(ifpu_idx).bits.uop.fu_code === FUConstants.FU_I2F
 
-   when (iregister_read.io.exe_reqs(ihfpu_idx).bits.uop.fu_code === FUConstants.FU_I2HF) {
-      exe_units(ihfpu_idx).io.req.valid := Bool(false)
-   }
-   hfp_pipeline.io.fromint := iregister_read.io.exe_reqs(ihfpu_idx)
-   hfp_pipeline.io.fromint.valid :=
-      iregister_read.io.exe_reqs(ihfpu_idx).valid &&
-      iregister_read.io.exe_reqs(ihfpu_idx).bits.uop.fu_code === FUConstants.FU_I2HF
+   //when (iregister_read.io.exe_reqs(ihfpu_idx).bits.uop.fu_code === FUConstants.FU_I2HF) {
+   //   exe_units(ihfpu_idx).io.req.valid := Bool(false)
+   //}
+   //hfp_pipeline.io.fromint := iregister_read.io.exe_reqs(ihfpu_idx)
+   //hfp_pipeline.io.fromint.valid :=
+   //   iregister_read.io.exe_reqs(ihfpu_idx).valid &&
+   //   iregister_read.io.exe_reqs(ihfpu_idx).bits.uop.fu_code === FUConstants.FU_I2HF
 
    fp_pipeline.io.brinfo := br_unit.brinfo
-   hfp_pipeline.io.brinfo := br_unit.brinfo
+   //hfp_pipeline.io.brinfo := br_unit.brinfo
 
    //  TODO : enable tofp
    //fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
    //fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
    //                                hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
 
-   hfp_pipeline.io.fromfp := fp_pipeline.io.tohfp
-   hfp_pipeline.io.fromfp.valid := fp_pipeline.io.tohfp.valid &&
+   //hfp_pipeline.io.fromfp := fp_pipeline.io.tohfp
+   //hfp_pipeline.io.fromfp.valid := fp_pipeline.io.tohfp.valid &&
                                    fp_pipeline.io.tohfp.bits.uop.fu_code === FUConstants.FU_F2HF
 
    //-------------------------------------------------------------
@@ -771,8 +772,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
    lsu.io.fp_stdata <> fp_pipeline.io.tosdq
    // TODO: enable hfp_sdq
-   lsu.io.hfp_stdata <> hfp_pipeline.io.tosdq
-   lsu.io.hfp_stdata.valid := Bool(false)
+   //lsu.io.hfp_stdata <> hfp_pipeline.io.tosdq
+   //lsu.io.hfp_stdata.valid := Bool(false)
 
 
 
@@ -823,10 +824,10 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
             fp_pipeline.io.ll_wport.bits.data := wbdata
             fp_pipeline.io.ll_wport.bits.fflags.valid := Bool(false)
 
-            hfp_pipeline.io.ll_wport.valid     := wbIsValid(RT_FHT)
-            hfp_pipeline.io.ll_wport.bits.uop  := wbresp.bits.uop
-            hfp_pipeline.io.ll_wport.bits.data := wbdata
-            hfp_pipeline.io.ll_wport.bits.fflags.valid := Bool(false)
+            //hfp_pipeline.io.ll_wport.valid     := wbIsValid(RT_FHT)
+            //hfp_pipeline.io.ll_wport.bits.uop  := wbresp.bits.uop
+            //hfp_pipeline.io.ll_wport.bits.data := wbdata
+            //hfp_pipeline.io.ll_wport.bits.fflags.valid := Bool(false)
 
          }
          else
@@ -877,9 +878,10 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    //ll_wbarb.io.in(2).bits := hfp_pipeline.io.toint.bits
    iregfile.io.write_ports(llidx) <> WritePort(ll_wbarb.io.out, IPREG_SZ, xLen)
 
-   fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
-   fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
-                                   hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
+   //TODO enable fromhfp
+   //fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
+   //fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
+   //                                hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
 
 
 
@@ -1019,7 +1021,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    // flush on exceptions, miniexeptions, and after some special instructions
 
    fp_pipeline.io.flush_pipeline := rob.io.flush.valid
-   hfp_pipeline.io.flush_pipeline := rob.io.flush.valid
+   //hfp_pipeline.io.flush_pipeline := rob.io.flush.valid
    for (w <- 0 until exe_units.length)
    {
       exe_units(w).io.req.bits.kill := rob.io.flush.valid
@@ -1040,7 +1042,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    assert (!(idle_cycles.value(13)), "Pipeline has hung.")
 
    fp_pipeline.io.debug_tsc_reg := debug_tsc_reg
-   hfp_pipeline.io.debug_tsc_reg := debug_tsc_reg
+   //hfp_pipeline.io.debug_tsc_reg := debug_tsc_reg
 
    //-------------------------------------------------------------
    // Uarch Hardware Performance Events (HPEs)
@@ -1131,7 +1133,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    csr.io.events(31) := !issue_units(0).io.dis_readys.reduce(_&_)
    csr.io.events(32) := !issue_units(1).io.dis_readys.reduce(_&_)
    csr.io.events(33) := !fp_pipeline.io.dis_readys.reduce(_&_)
-   csr.io.events(37) := !hfp_pipeline.io.dis_readys.reduce(_&_)
+   //csr.io.events(37) := !hfp_pipeline.io.dis_readys.reduce(_&_)
 
    assert (!(Range(0,COMMIT_WIDTH).map{w =>
       rob.io.commit.valids(w) && rob.io.commit.uops(w).is_br_or_jmp && rob.io.commit.uops(w).is_jal &&
