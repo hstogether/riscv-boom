@@ -74,7 +74,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    val dec_serializer   = Module(new FetchSerializerNtoM)
    val decode_units     = for (w <- 0 until DECODE_WIDTH) yield { val d = Module(new DecodeUnit); d }
    val dec_brmask_logic = Module(new BranchMaskGenerationLogic(DECODE_WIDTH))
-   val rename_stage     = Module(new RenameStage(DECODE_WIDTH, num_wakeup_ports, fp_pipeline.io.wakeups.length))// hfp_pipeline.io.wakeups.length))
+   val rename_stage     = Module(new RenameStage(DECODE_WIDTH, num_wakeup_ports, fp_pipeline.io.wakeups.length, hfp_pipeline.io.wakeups.length))
    val issue_units      = new boom.IssueUnits(num_wakeup_ports)
    val iregfile         = if (regreadLatency == 1 && enableCustomRf) {
                               Module(new RegisterFileSeqCustomArray(numIntPhysRegs,
@@ -491,7 +491,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    {
       renport <> fpport
    }
-/*
+
    for( i <- 0 until hfp_pipeline.io.wakeups.length)
    {
       assert( !(hfp_pipeline.io.wakeups(i).valid) || (hfp_pipeline.io.wakeups(i).valid && hfp_pipeline.io.wakeups(i).bits.uop.dst_rtype === RT_FHT))
@@ -499,8 +499,9 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    for ((renport, hfpport) <- rename_stage.io.hfp_wakeups zip hfp_pipeline.io.wakeups)
    {
       renport <> hfpport
+      renport.valid := Bool(false)
    }
-*/
+
    rename_stage.io.com_valids := rob.io.commit.valids
    rename_stage.io.com_uops := rob.io.commit.uops
    rename_stage.io.com_rbk_valids := rob.io.commit.rbk_valids
