@@ -772,8 +772,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
    lsu.io.fp_stdata <> fp_pipeline.io.tosdq
    // TODO: enable hfp_sdq
-   //lsu.io.hfp_stdata <> hfp_pipeline.io.tosdq
-   //lsu.io.hfp_stdata.valid := Bool(false)
+   lsu.io.hfp_stdata <> hfp_pipeline.io.tosdq
+   lsu.io.hfp_stdata.valid := Bool(false) // TODO: remove me -- Jecy
 
 
 
