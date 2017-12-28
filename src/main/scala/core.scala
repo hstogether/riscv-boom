@@ -103,8 +103,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    val rob              = Module(new Rob(
                                  DECODE_WIDTH,
                                  NUM_ROB_ENTRIES,
-                                 num_irf_write_ports + fp_pipeline.io.wakeups.length,// + hfp_pipeline.io.wakeups.length, // TODO: enable HFP
-                                 exe_units.num_fpu_ports + fp_pipeline.io.wakeups.length))// + hfp_pipeline.io.wakeups.length))
+                                 num_irf_write_ports + fp_pipeline.io.wakeups.length + hfp_pipeline.io.wakeups.length, // TODO: enable HFP
+                                 exe_units.num_fpu_ports + fp_pipeline.io.wakeups.length + hfp_pipeline.io.wakeups.length))
    // Used to wakeup registers in rename and issue. ROB needs to listen to something else.
    val int_wakeups      = Wire(Vec(num_wakeup_ports, Valid(new ExeUnitResp(xLen))))
 
@@ -974,8 +974,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       cnt += 1
       f_cnt += 1
    }
-//TODO enable hfp_pipeline
-/*
+
    for (wakeup <- hfp_pipeline.io.wakeups)
    {
       rob.io.wb_resps(cnt) <> wakeup
@@ -984,7 +983,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       cnt += 1
       f_cnt += 1
    }
-*/
+
    assert (cnt == rob.num_wakeup_ports)
 
    // branch resolution
