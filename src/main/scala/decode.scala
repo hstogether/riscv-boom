@@ -468,9 +468,11 @@ class DecodeUnit(implicit p: Parameters) extends BoomModule()(p)
    uop.dst_rtype  := cs.dst_type
    uop.lrs1_rtype := cs.rs1_type
    uop.lrs2_rtype := cs.rs2_type
+   uop.lrs3_rtype := cs.rs3_type
    uop.frs3_en    := cs.frs3_en
 
    uop.fp_val     := cs.fp_val
+   uop.hfp_val    := cs.hfp_val
    uop.fp_single  := cs.fp_single // TODO use this signal instead of the FPU decode's table signal?
 
    uop.mem_cmd    := cs.mem_cmd
