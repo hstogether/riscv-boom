@@ -103,7 +103,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    val rob              = Module(new Rob(
                                  DECODE_WIDTH,
                                  NUM_ROB_ENTRIES,
-                                 num_irf_write_ports + fp_pipeline.io.wakeups.length + hfp_pipeline.io.wakeups.length, // TODO: enable HFP
+                                 num_irf_write_ports + fp_pipeline.io.wakeups.length + hfp_pipeline.io.wakeups.length,
                                  exe_units.num_fpu_ports + fp_pipeline.io.wakeups.length + hfp_pipeline.io.wakeups.length))
    // Used to wakeup registers in rename and issue. ROB needs to listen to something else.
    val int_wakeups      = Wire(Vec(num_wakeup_ports, Valid(new ExeUnitResp(xLen))))
@@ -415,7 +415,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    //-------------------------------------------------------------
 
    // TODO for now, assume worst-case all instructions will dispatch towards one issue unit.
-   val dis_readys = issue_units.map(_.io.dis_readys.asUInt).reduce(_&_) & fp_pipeline.io.dis_readys.asUInt // & hfp_pipeline.io.dis_readys.asUInt // TODO: enable hfp_pipeline
+   val dis_readys = issue_units.map(_.io.dis_readys.asUInt).reduce(_&_) & fp_pipeline.io.dis_readys.asUInt & hfp_pipeline.io.dis_readys.asUInt
 
    rename_stage.io.dis_inst_can_proceed := dis_readys.toBools
    rename_stage.io.ren_pred_info := Vec(dec_fbundle.uops.map(_.br_prediction))
@@ -709,9 +709,9 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       iregister_read.io.exe_reqs(ifpu_idx).valid &&
       iregister_read.io.exe_reqs(ifpu_idx).bits.uop.fu_code === FUConstants.FU_I2F
 
-   //when (iregister_read.io.exe_reqs(ihfpu_idx).bits.uop.fu_code === FUConstants.FU_I2HF) {
-   //   exe_units(ihfpu_idx).io.req.valid := Bool(false)
-   //}
+   when (iregister_read.io.exe_reqs(ihfpu_idx).bits.uop.fu_code === FUConstants.FU_I2HF) {
+      exe_units(ihfpu_idx).io.req.valid := Bool(false)
+   }
    hfp_pipeline.io.fromint := iregister_read.io.exe_reqs(ihfpu_idx)
    hfp_pipeline.io.fromint.valid :=
       iregister_read.io.exe_reqs(ihfpu_idx).valid &&
@@ -721,9 +721,9 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    hfp_pipeline.io.brinfo := br_unit.brinfo
 
    //  TODO : enable tofp
-   //fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
-   //fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
-   //                                hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
+   fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
+   fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
+                                   hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
 
    hfp_pipeline.io.fromfp := fp_pipeline.io.tohfp
    hfp_pipeline.io.fromfp.valid := fp_pipeline.io.tohfp.valid &&
@@ -774,7 +774,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    lsu.io.fp_stdata <> fp_pipeline.io.tosdq
    // TODO: enable hfp_sdq
    lsu.io.hfp_stdata <> hfp_pipeline.io.tosdq
-   lsu.io.hfp_stdata.valid := Bool(false) // TODO: remove me -- Jecy
+   //lsu.io.hfp_stdata.valid := Bool(false) // TODO: remove me -- Jecy
 
 
 
@@ -880,9 +880,9 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    iregfile.io.write_ports(llidx) <> WritePort(ll_wbarb.io.out, IPREG_SZ, xLen)
 
    //TODO enable fromhfp
-   //fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
-   //fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
-   //                                hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
+   fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
+   fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
+                                   hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
 
 
 
@@ -1133,7 +1133,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    csr.io.events(31) := !issue_units(0).io.dis_readys.reduce(_&_)
    csr.io.events(32) := !issue_units(1).io.dis_readys.reduce(_&_)
    csr.io.events(33) := !fp_pipeline.io.dis_readys.reduce(_&_)
-   //csr.io.events(37) := !hfp_pipeline.io.dis_readys.reduce(_&_)
+   csr.io.events(37) := !hfp_pipeline.io.dis_readys.reduce(_&_)
 
    assert (!(Range(0,COMMIT_WIDTH).map{w =>
       rob.io.commit.valids(w) && rob.io.commit.uops(w).is_br_or_jmp && rob.io.commit.uops(w).is_jal &&
