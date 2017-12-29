@@ -246,7 +246,7 @@ class RenameStage(
 
       uop.pop1       := Mux(uop.lrs1_rtype === RT_FLT, fmap.prs1, Mux(uop.lrs1_rtype === RT_FHT, hfmap.prs1, imap.prs1))
       uop.pop2       := Mux(uop.lrs2_rtype === RT_FLT, fmap.prs2, Mux(uop.lrs2_rtype === RT_FHT, hfmap.prs2, imap.prs2))
-      uop.pop3       := Mux(uop.lrs3_rtype === RT_FLT, fmap.prs3, hfmap.prs3) //fmaptable.io.values(w).prs3 // only FP has 3rd operand
+      uop.pop3       := fmaptable.io.values(w).prs3 //Mux(uop.lrs3_rtype === RT_FLT, fmap.prs3, hfmap.prs3) //fmaptable.io.values(w).prs3 // only FP has 3rd operand
       uop.stale_pdst := Mux(uop.dst_rtype === RT_FLT,  fmap.stale_pdst, Mux(uop.dst_rtype === RT_FHT, hfmap.stale_pdst, imap.stale_pdst))
    }
 
@@ -353,7 +353,7 @@ class RenameStage(
       val hfbusy = hfbusytable.io.values(w)
       uop.prs1_busy := Mux(uop.lrs1_rtype === RT_FLT, fbusy.prs1_busy, Mux(uop.lrs1_rtype === RT_FHT, hfbusy.prs1_busy, ibusy.prs1_busy))
       uop.prs2_busy := Mux(uop.lrs2_rtype === RT_FLT, fbusy.prs2_busy, Mux(uop.lrs2_rtype === RT_FHT, hfbusy.prs2_busy, ibusy.prs2_busy))
-      uop.prs3_busy := Mux(uop.lrs3_rtype === RT_FLT, fbusy.prs3_busy, hfbusy.prs3_busy)
+      uop.prs3_busy := fbusy.prs3_busy //Mux(uop.lrs3_rtype === RT_FLT, fbusy.prs3_busy, hfbusy.prs3_busy)
 
       val valid = ren2_valids(w)
       assert (!(valid && ibusy.prs1_busy && uop.lrs1_rtype === RT_FIX && uop.lrs1 === UInt(0)), "[rename] x0 is busy??")
