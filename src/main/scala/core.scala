@@ -535,8 +535,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       iu.io.dis_valids(w) := dis_valids(w) && dis_uops(w).iqtype === UInt(iu.iqType)
       iu.io.dis_uops(w) := dis_uops(w)
 
-      when (dis_uops(w).uopc === uopSTA && dis_uops(w).lrs2_rtype === RT_FLT) { // ??? --Jecy
-         iu.io.dis_uops(w).lrs2_rtype := RT_X
+      when (dis_uops(w).uopc === uopSTA && (dis_uops(w).lrs2_rtype === RT_FLT || dis_uops(w).lrs2_rtype === RT_FHT)) { // ??? --Jecy
+         iu.io.dis_uops(w).lrs2_rtype := RT_X // disable lrs2 in int issue units when the ins is fp or hfp. -- Jecy
          iu.io.dis_uops(w).prs2_busy := Bool(false)
       }
    }
