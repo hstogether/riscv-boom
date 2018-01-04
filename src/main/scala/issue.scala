@@ -124,7 +124,7 @@ abstract class IssueUnit(
             , Mux(issue_slots(i).uop.dst_rtype === RT_FIX, Str("X"),
               Mux(issue_slots(i).uop.dst_rtype === RT_X, Str("-"),
               Mux(issue_slots(i).uop.dst_rtype === RT_FLT, Str("f"),
-              Mux(issue_slots(i).uop.dst_rtype === RT_FHT, Str("hf"),
+              Mux(issue_slots(i).uop.dst_rtype === RT_FHT, Str("h"), // h -> hf for 8 bit value other than 16 bit -- Jecy
               Mux(issue_slots(i).uop.dst_rtype === RT_PAS, Str("C"), Str("?"))))))
             , issue_slots(i).uop.inst
             , issue_slots(i).uop.pc(31,0)
