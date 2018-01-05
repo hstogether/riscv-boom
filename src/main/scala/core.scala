@@ -722,12 +722,12 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
    //  TODO : enable tofp
    fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
-   fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
-                                   hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
+   //fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
+   //                                hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
 
    hfp_pipeline.io.fromfp := fp_pipeline.io.tohfp
-   hfp_pipeline.io.fromfp.valid := fp_pipeline.io.tohfp.valid &&
-                                   fp_pipeline.io.tohfp.bits.uop.fu_code === FUConstants.FU_F2HF
+   //hfp_pipeline.io.fromfp.valid := fp_pipeline.io.tohfp.valid &&
+   //                                fp_pipeline.io.tohfp.bits.uop.fu_code === FUConstants.FU_F2HF
 
    //-------------------------------------------------------------
    //-------------------------------------------------------------
@@ -881,8 +881,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
    //TODO enable fromhfp
    fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
-   fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
-                                   hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
+   //fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
+   //                                hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
 
 
 

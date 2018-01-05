@@ -263,8 +263,8 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
                assert(!tofp_found)
                tofp_found=true
             }
-            io.toint.valid := toint
-            io.tofp.valid  := tofp
+            io.toint.valid := wbresp.valid && toint
+            io.tofp.valid  := wbresp.valid && tofp
          } else if (eu.has_ihfpu || eu.has_fphfpu) {
             // share with ll unit
          } else {
