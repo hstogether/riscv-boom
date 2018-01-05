@@ -195,8 +195,11 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
       io.tosdq.bits.data := unrec_out
       
       // to f2hf unit
-      io.tohfp.bits.uop := fregister_read.io.exe_reqs(w).bits.uop
-      io.tohfp.bits.rs1_data := fregister_read.io.exe_reqs(w).bits.rs1_data
+      //io.tohfp.bits.uop := fregister_read.io.exe_reqs(w).bits.uop
+      //io.tohfp.bits.rs1_data := fregister_read.io.exe_reqs(w).bits.rs1_data
+      io.tohfp := fregister_read.io.exe_reqs(w)
+      io.tohfp.valid := fregister_read.io.exe_reqs(w).valid &&
+                        fregister_read.io.exe_reqs(w).bits.uop.fu_code === FUConstants.FU_F2HF
 
    }
    require (exe_units.num_total_bypass_ports == 0)

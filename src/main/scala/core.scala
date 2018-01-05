@@ -89,7 +89,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
                                  xLen,
                                  exe_units.bypassable_write_port_mask))
                           }
-   val ll_wbarb         = Module(new Arbiter(new ExeUnitResp(xLen), 2))
+   val ll_wbarb         = Module(new Arbiter(new ExeUnitResp(xLen), 3))
    val iregister_read   = Module(new RegisterRead(
                                  issue_units.map(_.issue_width).sum,
                                  exe_units.withFilter(_.usesIRF).map(_.supportedFuncUnits),
@@ -872,7 +872,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    assert (ll_wbarb.io.in(0).ready) // never backpressure the memory unit.
    ll_wbarb.io.in(1) <> fp_pipeline.io.toint
    // TODO: enable hfp2i and fix the bug in rob.scala 611
-   //ll_wbarb.io.in(2) <> hfp_pipeline.io.toint
+   ll_wbarb.io.in(2) <> hfp_pipeline.io.toint
    //ll_wbarb.io.in(1).valid := fp_pipeline.io.toint.valid && fp_pipeline.io.toint.bits.uop.dst_rtype === RT_FIX
    //ll_wbarb.io.in(1).bits := fp_pipeline.io.toint.bits
    //ll_wbarb.io.in(2).valid := hfp_pipeline.io.toint.valid && hfp_pipeline.io.toint.bits.uop.dst_rtype === RT_FIX
