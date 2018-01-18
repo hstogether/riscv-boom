@@ -337,5 +337,15 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
    {
       exe_units(w).io.req.bits.kill := io.flush_pipeline
    }
+   if(DEBUG_PRINTF_REGF)
+   {
+      printf("fp-physical-registers--------------------------------------\n")
+      for(i <- 0 until numFpPhysRegs)
+      {
+         printf("    fprs[%d]=[%x]    ",UInt(i,log2Up(numFpPhysRegs)),fregfile.io.debug(i).data)
+         if((i+1)%4==0)printf("\n")
+      }
+      printf("\n")
+   }
 
 }

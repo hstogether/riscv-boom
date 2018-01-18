@@ -392,5 +392,32 @@ class RenameStage(
    io.debug.hffreelist  := hffreelist.io.debug.freelist
    io.debug.hfisprlist  := hffreelist.io.debug.isprlist
    io.debug.hfbusytable := hfbusytable.io.debug.busytable
+
+   if(DEBUG_PRINTF_RENM){
+
+      printf("int_rename_table----------------------------------------------------------\n")
+      for(i <- 0 until 32){
+         //printf("rnt[%d]=[%x]\t",UInt(i),hfmaptable.entries(i).element.asUInt)
+         printf("    irnt[%d]=[%d]    ",UInt(i,6),imaptable.io.debug(i))
+         if((i+1)%4==0)printf("\n")
+      }
+      printf("\n")
+
+      printf("fp_rename_table----------------------------------------------------------\n")
+      for(i <- 0 until 32){
+         //printf("rnt[%d]=[%x]\t",UInt(i),hfmaptable.entries(i).element.asUInt)
+         printf("    frnt[%d]=[%d]    ",UInt(i,6),fmaptable.io.debug(i))
+         if((i+1)%4==0)printf("\n")
+      }
+      printf("\n")
+
+      printf("hfp_rename_table----------------------------------------------------------\n")
+      for(i <- 0 until 32){
+         //printf("rnt[%d]=[%x]\t",UInt(i),hfmaptable.entries(i).element.asUInt)
+         printf("    hrnt[%d]=[%d]    ",UInt(i,6),hfmaptable.io.debug(i))
+         if((i+1)%4==0)printf("\n")
+      }
+      printf("\n")
+   }
 }
 

@@ -32,6 +32,11 @@ class RegisterFileWritePort(addr_width: Int, data_width: Int)(implicit p: Parame
    override def cloneType = new RegisterFileWritePort(addr_width, data_width)(p).asInstanceOf[this.type]
 }
 
+class RegisterDebugIO(data_width: Int)(implicit p: Parameters) extends BoomBundle()(p)
+{
+   val data = UInt(width=data_width)
+   override def cloneType = new RegisterDebugIO(data_width)(p).asInstanceOf[this.type]
+}
 
 // utility function to turn ExeUnitResps to match the regfile's WritePort I/Os.
 object WritePort
@@ -62,6 +67,7 @@ abstract class RegisterFile(
    {
       val read_ports = Vec(num_read_ports, new RegisterFileReadPortIO(PREG_SZ, register_width))
       val write_ports = Vec(num_write_ports, Decoupled(new RegisterFileWritePort(PREG_SZ, register_width))).flip
+      val debug = Vec(num_registers, new RegisterDebugIO(register_width))
    })
 
    private val rf_cost = (num_read_ports+num_write_ports)*(num_read_ports+2*num_write_ports)
@@ -158,6 +164,14 @@ class RegisterFileBehavorial(
       when (wport.valid && (wport.bits.addr =/= UInt(0)))
       {
          regfile(wport.bits.addr) := wport.bits.data
+      }
+   }
+
+   if(DEBUG_PRINTF_REGF){
+      //for(d <- regfile) io.debug := d
+      for(i <- 0 until num_registers)
+      {
+         io.debug(i).data := regfile(i)
       }
    }
 }

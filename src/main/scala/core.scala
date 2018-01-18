@@ -1226,22 +1226,26 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
             , Mux(dis_uops(w).dst_rtype   === RT_FIX, Str("X")
               , Mux(dis_uops(w).dst_rtype === RT_X  , Str("-")
               , Mux(dis_uops(w).dst_rtype === RT_FLT, Str("f")
-              , Mux(dis_uops(w).dst_rtype === RT_PAS, Str("C"), Str("?")))))
+              , Mux(dis_uops(w).dst_rtype === RT_FHT, Str("h")
+              , Mux(dis_uops(w).dst_rtype === RT_PAS, Str("C"), Str("?"))))))
             , dis_uops(w).pop1
             , Mux(rename_stage.io.ren2_uops(w).prs1_busy, Str("B"), Str("R"))
             , Mux(dis_uops(w).lrs1_rtype    === RT_FIX, Str("X")
                , Mux(dis_uops(w).lrs1_rtype === RT_X  , Str("-")
                , Mux(dis_uops(w).lrs1_rtype === RT_FLT, Str("f")
-               , Mux(dis_uops(w).lrs1_rtype === RT_PAS, Str("C"), Str("?")))))
+               , Mux(dis_uops(w).lrs1_rtype === RT_FHT, Str("h")
+               , Mux(dis_uops(w).lrs1_rtype === RT_PAS, Str("C"), Str("?"))))))
             , dis_uops(w).pop2
             , Mux(rename_stage.io.ren2_uops(w).prs2_busy, Str("B"), Str("R"))
             , Mux(dis_uops(w).lrs2_rtype    === RT_FIX, Str("X")
                , Mux(dis_uops(w).lrs2_rtype === RT_X  , Str("-")
                , Mux(dis_uops(w).lrs2_rtype === RT_FLT, Str("f")
-               , Mux(dis_uops(w).lrs2_rtype === RT_PAS, Str("C"), Str("?")))))
+               , Mux(dis_uops(w).lrs2_rtype === RT_FLT, Str("h")
+               , Mux(dis_uops(w).lrs2_rtype === RT_PAS, Str("C"), Str("?"))))))
             , dis_uops(w).pop3
             , Mux(rename_stage.io.ren2_uops(w).prs3_busy, Str("B"), Str("R"))
-            , Mux(dis_uops(w).frs3_en, Str("f"), Str("-"))
+            , Mux(dis_uops(w).frs3_en && dis_uops(w).lrs3_rtype === RT_FLT, Str("f")
+               , Mux(dis_uops(w).lrs1_rtype === RT_FHT, Str("h"), Str("-")))
             )
       }
 
@@ -1262,7 +1266,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
          , dec_brmask_logic.io.debug.branch_mask
          , Mux(csr.io.status.prv === Bits(0x3), Str("M"),
            Mux(csr.io.status.prv === Bits(0x0), Str("U"),
-           Mux(csr.io.status.prv === Bits(0x1), Str("S"),  //2 is H
+           Mux(csr.io.status.prv === Bits(0x1), Str("S"), 
                                                  Str("?"))))
          )
       }
@@ -1327,6 +1331,17 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    } // End DEBUG_PRINTF
 
 
+   if(DEBUG_PRINTF_REGF)
+   {
+      printf("int-physical-registers--------------------------------------\n")
+      for(i <- 0 until numIntPhysRegs)
+      {
+         printf("    iprs[%d]=[%x]    ",UInt(i,log2Up(numIntPhysRegs)),iregfile.io.debug(i).data)
+         if((i+1)%4==0)printf("\n")
+      }
+      printf("\n")
+   }
+
 
    if (COMMIT_LOG_PRINTF)
    {
@@ -1346,6 +1361,12 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
             .elsewhen (rob.io.commit.uops(w).dst_rtype === RT_FLT)
             {
                printf("%d 0x%x (0x%x) f%d 0x%x\n",
+                  priv, Sext(rob.io.commit.uops(w).pc(vaddrBits,0), xLen), rob.io.commit.uops(w).inst,
+                  rob.io.commit.uops(w).inst(RD_MSB,RD_LSB), rob.io.commit.uops(w).debug_wdata)
+            }
+            .elsewhen (rob.io.commit.uops(w).dst_rtype === RT_FHT)
+            {
+               printf("%d 0x%x (0x%x) h%d 0x%x\n",
                   priv, Sext(rob.io.commit.uops(w).pc(vaddrBits,0), xLen), rob.io.commit.uops(w).inst,
                   rob.io.commit.uops(w).inst(RD_MSB,RD_LSB), rob.io.commit.uops(w).debug_wdata)
             }

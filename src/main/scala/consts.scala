@@ -21,8 +21,8 @@ import util.Str
 
 trait BOOMDebugConstants
 {
-   val DEBUG_PRINTF        = false // use the Chisel printf functionality
-   val COMMIT_LOG_PRINTF   = false // dump commit state, for comparision against ISA sim
+   val DEBUG_PRINTF        = true // use the Chisel printf functionality
+   val COMMIT_LOG_PRINTF   = true // dump commit state, for comparision against ISA sim
    val O3PIPEVIEW_PRINTF   = false // dump trace for O3PipeView from gem5
    val O3_CYCLE_TIME       = (1000)// "cycle" time expected by o3pipeview.py
 
@@ -31,6 +31,8 @@ trait BOOMDebugConstants
    val DEBUG_PRINTF_ROB    = true && DEBUG_PRINTF
    val DEBUG_PRINTF_TAGE   = true && DEBUG_PRINTF
    val DEBUG_PRINTF_BROB   = false && DEBUG_PRINTF
+   val DEBUG_PRINTF_REGF   = true && DEBUG_PRINTF
+   val DEBUG_PRINTF_RENM   = true && DEBUG_PRINTF
 
    // BPD asserts can be too heavy-handed for something that we're okay giving incorrect answers.
    val ENABLE_BPD_ASSERTS  = false

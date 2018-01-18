@@ -161,6 +161,7 @@ class RenameMapTable(
 
       // Outputs
       val values           = Vec(pl_width, new MapTableOutput(preg_sz)).asOutput
+      val debug            = Vec(num_logical_registers,UInt(PREG_SZ))
    })
 
 
@@ -291,6 +292,19 @@ class RenameMapTable(
          assert (!(io.ren_uops(w).lrs2 === UInt(0) && io.ren_uops(w).lrs2_rtype === RT_FIX && map_table_prs2(w) =/= UInt(0)), "lrs2==0 but maptable(" + w + ") returning non-zero.")
       }
       // scalastyle:on
+   }
+   if(DEBUG_PRINTF_RENM)
+   {
+      map_table_io.zipWithIndex.map{case(entry,i) =>
+      {
+         io.debug(i) := entry.element
+      }}
+/*
+      for(i <- 0 until num_logical_registers)
+      {
+         io.debug(i) := entries(i).element
+      }
+*/
    }
 }
 

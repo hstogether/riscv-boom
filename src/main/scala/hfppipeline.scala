@@ -302,6 +302,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
    io.wakeups(0) <> ll_wbarb.io.out
    ll_wbarb.io.out.ready := Bool(true)
+   assert( !(io.wakeups(0).valid) || (io.wakeups(0).valid && io.wakeups(0).bits.uop.dst_rtype === RT_FHT))
 
    w_cnt = 1
    for (eu <- exe_units)
@@ -326,7 +327,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
    for ( i <- 0 until io.wakeups.length)
    {
-      assert( !(io.wakeups(i).valid) || (io.wakeups(i).valid && io.wakeups(i).bits.uop.dst_rtype === RT_FLT))
+      assert( !(io.wakeups(i).valid) || (io.wakeups(i).valid && io.wakeups(i).bits.uop.dst_rtype === RT_FHT))
    }
 
 
@@ -343,4 +344,14 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       exe_units(w).io.req.bits.kill := io.flush_pipeline
    }
 
+   if(DEBUG_PRINTF_REGF)
+   {
+      printf("hfp-physical-registers--------------------------------------\n")
+      for(i <- 0 until numFpPhysRegs)
+      {
+         printf("    hprs[%d]=[%x]    ",UInt(i,log2Up(numFpPhysRegs)),fregfile.io.debug(i).data)
+         if((i+1)%4==0)printf("\n")
+      }
+      printf("\n")
+   }
 }
