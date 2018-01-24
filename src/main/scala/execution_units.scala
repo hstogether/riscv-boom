@@ -16,6 +16,10 @@ import scala.collection.mutable.ArrayBuffer
 
 class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p: Parameters) extends HasBoomCoreParameters
 {
+   if(DEBUG_PRINTF_HFPU_PATH && hfpu){
+      printf("==========[Come into ExecutionUnits and hfpu==true]==========\n")
+   }
+
    val totalIssueWidth = issueParams.map(_.issueWidth).sum
    if (!fpu && !hfpu) {
       println("\n   ~*** " + Seq("One","Two","Three","Four")(DECODE_WIDTH-1) + "-wide Machine ***~\n")
@@ -136,6 +140,11 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
       }
       //exe_units += Module(new ALUExeUnit(has_ihfpu=true))
    } else if(hfpu && !fpu){
+
+      if(DEBUG_PRINTF_HFPU_PATH){
+         printf("==========[New ExecutionUnits HFPUExeUnit/IntToHFPExeUnit/FPToHFPExeUnit]==========\n")
+      }
+
       require (usingHFPU)
       val hfp_width = issueParams.find(_.iqType == IQT_HFP.litValue).get.issueWidth
       require (hfp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.

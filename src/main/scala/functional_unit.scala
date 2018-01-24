@@ -688,6 +688,11 @@ class HFPUUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    earliest_bypass_stage = 0,
    data_width = 65)(p)
 {
+   if(DEBUG_PRINTF_HFPU_PATH){
+      printf("==========[Come into HFPUUnit]==========\n")
+      printf("==========[New a HFPU()]==========\n")
+   }
+
    val hfpu = Module(new HFPU())
    hfpu.io.req <> io.req
    hfpu.io.req.bits.fcsr_rm := io.fcsr_rm
@@ -696,6 +701,17 @@ class HFPUUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    io.resp.bits.fflags.valid      := hfpu.io.resp.bits.fflags.valid
    io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
    io.resp.bits.fflags.bits.flags := hfpu.io.resp.bits.fflags.bits.flags // kill me now
+
+   if(DEBUG_PRINTF_HFPU){
+      printf("HFPUUnit-Start--------------------------------------------------------------------------------------------\n")
+      printf("io.req.rs1=[%x]    io.req.rs2=[%x]    io.req.rs3=[%x]\n",io.req.bits.rs1_data,io.req.bits.rs2_data,io.req.bits.rs3_data);
+      printf("hfpu.io.req.rs1=[%x]    hfpu.io.req.rs2=[%x]    hfpu.io.req.rs3=[%x]\n",hfpu.io.req.bits.rs1_data,hfpu.io.req.bits.rs2_data,hfpu.io.req.bits.rs3_data);
+      printf("hfpu.io.resp.data=[%x]    hfpu.io.resp.valid=[%d]\n",hfpu.io.resp.bits.data,hfpu.io.resp.bits.fflags.valid.asUInt);
+      printf("io.resp.data=[%x]    io.resp.valid=[%d]\n",io.resp.bits.data,io.resp.bits.fflags.valid.asUInt);
+      printf("HFPUUnit-End--------------------------------------------------------------------------------------------\n")
+   }
+
+
 }
 
 class IntToFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(

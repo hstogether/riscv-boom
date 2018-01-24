@@ -22,6 +22,10 @@ import boom.FUConstants._
 
 class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 {
+   if(DEBUG_PRINTF_HFPU_PATH){
+      printf("==========[Come in to HfpPipeline]==========\n")
+   }
+
    val fpIssueParams = issueParams.find(_.iqType == IQT_HFP.litValue).get
    val num_ll_ports = 1 // hard-wired; used by mem port and i2f port.
    val num_wakeup_ports = fpIssueParams.issueWidth + num_ll_ports
@@ -55,6 +59,10 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
    //**********************************
    // construct all of the modules
+
+   if(DEBUG_PRINTF_HFPU_PATH){
+      printf("==========[New a boom.ExecutionUnits(hfpt=true)]==========\n")
+   }
 
    val exe_units        = new boom.ExecutionUnits(hfpu=true)
    val issue_unit       = Module(new IssueUnitCollasping(
@@ -178,6 +186,15 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       ex.io.req <> fregister_read.io.exe_reqs(w)
       require (!ex.isBypassable)
 
+      if(DEBUG_PRINTF_HFPU){
+         printf("HfpPipeline-Start--------------------------------------------------------------------------------------------\n")
+         printf("fregister_read.io.exe_reqs.rs1=[%x]    fregister_read.io.exe_reqs.rs2=[%x]    fregister_read.io.exe_reqs.rs3=[%x]\n",
+                 fregister_read.io.exe_reqs(w).bits.rs1_data,fregister_read.io.exe_reqs(w).bits.rs2_data,fregister_read.io.exe_reqs(w).bits.rs3_data);
+         printf("ex.io.req.rs1=[%x]    ex.io.req.rs2=[%x]    ex.io.req.rs3=[%x]\n",ex.io.req.bits.rs1_data,ex.io.req.bits.rs2_data,ex.io.req.bits.rs3_data);
+         printf("HfpPipeline-End--------------------------------------------------------------------------------------------\n")
+      }
+
+
       // TODO HACK only let one FPU issue port issue these.
       require (w == 0)
       when (fregister_read.io.exe_reqs(w).bits.uop.uopc === uopSTD) {
@@ -275,6 +292,15 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
             fregfile.io.write_ports(w_cnt).bits.addr := wbresp.bits.uop.pdst
             fregfile.io.write_ports(w_cnt).bits.data := wbresp.bits.data
             wbresp.ready := fregfile.io.write_ports(w_cnt).ready
+         if(DEBUG_PRINTF_HFPU){
+            printf("HfpPipeline-Start--------------------------------------------------------------------------------------------\n")
+            printf("wbresp.data=[%x]    wbresp.valid=[%d]\n",wbresp.bits.data,wbresp.ready.asUInt);
+            printf("fregfile.io.write_ports.bits.data=[%x]    fregfile.io.write_ports.valid=[%d]\n",
+                    fregfile.io.write_ports(w_cnt).bits.data,fregfile.io.write_ports(w_cnt).ready.asUInt);
+            printf("HfpPipeline-End--------------------------------------------------------------------------------------------\n")
+         }
+
+
          }
 
          assert (!(wbresp.valid &&

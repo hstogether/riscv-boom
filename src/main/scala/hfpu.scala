@@ -99,6 +99,10 @@ class UOPCodeHFPUDecoder extends Module
 
 class HFPU(implicit p: Parameters) extends BoomModule()(p)
 {
+   if(DEBUG_PRINTF_HFPU_PATH){
+      printf("==========[Come into HFPU]==========\n")
+   }
+
    val io = IO(new Bundle
    {
       val req = new ValidIO(new FpuReq).flip
@@ -156,6 +160,16 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
    io.resp.bits.data              := hfpu_out.data
    io.resp.bits.fflags.valid      := io.resp.valid
    io.resp.bits.fflags.bits.flags := hfpu_out.exc
+
+   if(DEBUG_PRINTF_HFPU){
+      printf("HFPU-Start--------------------------------------------------------------------------------------------\n")
+      printf("req.rs1=[%x]    req.rs2=[%x]    req.rs3=[%x]\n",io_req.rs1_data,io_req.rs2_data,io_req.rs3_data);
+      printf("hfma.io.rs1=[%x]    hfma.io.rs2=[%x]    hfma.io.rs3=[%x]\n",hfma.io.in.bits.in1,hfma.io.in.bits.in2,hfma.io.in.bits.in3);
+      printf("hfma.io.out=[%x]    hfma.io.out.valid=[%d]\n",hfma.io.out.bits.data,hfma.io.out.valid.asUInt);
+      printf("resp.data=[%x]    resp.valid=[%d]\n",io.resp.bits.data,io.resp.bits.fflags.valid.asUInt);
+      printf("HFPU-End--------------------------------------------------------------------------------------------\n")
+   }
+
 
 // TODO why is this assertion failing?
 //   assert (PopCount(Vec(ifpu.io.out, fpiu_out, fpmu.io.out, sfma.io.out, dfma.io.out).map(_.valid)) <= UInt(1),

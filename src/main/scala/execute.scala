@@ -488,6 +488,10 @@ class HFPUExeUnit(
       has_hfpiu = has_hfpiu,
       has_hfpfpu = has_hfpfpu)(p)
 {
+   if(DEBUG_PRINTF_HFPU_PATH){
+      printf("==========[Come into HFPUExeUnit]==========\n")
+   }
+
    println ("     ExeUnit--")
    if (has_hfpu) println ("       - HFPU (Latency: " + hfmaLatency + ")")
    if (has_hfdiv) println ("       - HFDiv/FSqrt")
@@ -519,6 +523,10 @@ class HFPUExeUnit(
    hfpu_resp_fflags.valid := Bool(false)
    if (has_hfpu)
    {
+      if(DEBUG_PRINTF_HFPU_PATH){
+         printf("==========[New a HFPUUnit]==========\n")
+      }
+
       hfpu = Module(new HFPUUnit())
       hfpu.io.req.valid           := io.req.valid &&
                                     (io.req.bits.uop.fu_code_is(FU_HFPU) ||
@@ -534,6 +542,17 @@ class HFPUExeUnit(
       hfpu_resp_val := hfpu.io.resp.valid
       hfpu_resp_fflags := hfpu.io.resp.bits.fflags
       fu_units += hfpu
+
+      if(DEBUG_PRINTF_HFPU){
+         printf("HFPUExeUnit-Start--------------------------------------------------------------------------------------------\n")
+         printf("io.req.rs1=[%x]    io.req.rs2=[%x]    io.req.rs3=[%x]\n",
+                 io.req.bits.rs1_data,io.req.bits.rs2_data,io.req.bits.rs3_data);
+         printf("hfpu.io.req.rs1=[%x]    hfpu.io.req.rs2=[%x]    hfpu.io.req.rs3=[%x]\n",
+                 hfpu.io.req.bits.rs1_data,hfpu.io.req.bits.rs2_data,hfpu.io.req.bits.rs3_data);
+         printf("HFPUExeUnit-End--------------------------------------------------------------------------------------------\n")
+      }
+
+
    }
 
 
@@ -577,6 +596,13 @@ class HFPUExeUnit(
                            PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.uop.asUInt))))
    io.resp(0).bits.data:= PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.data.asUInt))).asUInt
    io.resp(0).bits.fflags := Mux(hfpu_resp_val, hfpu_resp_fflags, hfdiv_resp_fflags)
+
+   if(DEBUG_PRINTF_HFPU){
+      printf("HFPUExeUnit-Start--------------------------------------------------------------------------------------------\n")
+      printf("io.resp[0].data=[%x]    io.resp[0].valid=[%d]\n",io.resp(0).bits.data,io.resp(0).valid.asUInt);
+      printf("HFPUExeUnit-End--------------------------------------------------------------------------------------------\n")
+   }
+ 
 
    // Outputs (Write Port #1) -- FpToInt Queuing Unit -----------------------
    if(io.req.bits.uop.fu_code_is(FU_HF2I)==true){
