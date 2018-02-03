@@ -466,16 +466,16 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
             }
          }
 
-         assert (!(wbresp.valid &&
-            !wbresp.bits.uop.ctrl.rf_wen &&
-            wbresp.bits.uop.dst_rtype === RT_FHT),
-            "[hfppipeline] An HFP writeback is being attempted with rf_wen disabled.")
-         if(DEBUG_PRINTF_HFPU){
+        if(DEBUG_PRINTF_HFPU){
             printf("HfpPipeline--Writeback Stage--assert---\n")
             printf("wbresp.valid=[%d]    wbresp.bits.uop.ctrl.rf_wen=[%d]    wbresp.bits.uop.dst_rtype=[%d]",
                     wbresp.valid.asUInt, wbresp.bits.uop.ctrl.rf_wen.asUInt, wbresp.bits.uop.dst_rtype)
             printf("HfpPipeline--Writeback Stage--assert---\n")
          }
+         assert (!(wbresp.valid &&
+            !wbresp.bits.uop.ctrl.rf_wen &&
+            wbresp.bits.uop.dst_rtype === RT_FHT),
+            "[hfppipeline] An HFP writeback is being attempted with rf_wen disabled.")
 
          assert (!(wbresp.valid &&
             wbresp.bits.uop.ctrl.rf_wen &&
