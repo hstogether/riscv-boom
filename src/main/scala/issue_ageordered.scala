@@ -129,6 +129,12 @@ class IssueUnitCollasping(
       for (w <- 0 until issue_width)
       {
          val can_allocate = (issue_slots(i).uop.fu_code & io.fu_types(w)) =/= UInt(0)
+         if(DEBUG_PRINTF_HFPU_ISSUE){
+            printf("Issue_ageordered--------------------------------------\n")
+            printf("fu_code=[%x]    fu_types[%x]    can_allocate=[%d]\n",
+                    issue_slots(i).uop.fu_code, io.fu_types(w), can_allocate.asUInt)
+            printf("Issue_ageordered--------------------------------------\n")
+         }
 
          when (requests(i) && !uop_issued && can_allocate && !port_issued(w))
          {

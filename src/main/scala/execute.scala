@@ -505,10 +505,16 @@ class HFPUExeUnit(
    // The Functional Units --------------------
    val fu_units = ArrayBuffer[FunctionalUnit]()
 
-   io.fu_types := Mux(Bool(has_fpu), FU_HFPU, Bits(0)) |
+   io.fu_types := Mux(Bool(has_hfpu), FU_HFPU, Bits(0)) |
                   Mux(!hfdiv_busy && Bool(has_hfdiv), FU_HFDV, Bits(0)) |
                   Mux(!hfpiu_busy && Bool(has_hfpiu), FU_HF2I, Bits(0)) |
                   Mux(!hfpfpu_busy && Bool(has_hfpfpu), FU_HF2F, Bits(0))
+
+   if(DEBUG_PRINTF_HFPU){
+       printf("HFPUExeUnit----------------------------------------------\n")
+       printf("io.fu_types=[%x]\n",io.fu_types)
+       printf("HFPUExeUnit----------------------------------------------\n")
+   }
 
 
    io.resp(0).bits.writesToIRF = false

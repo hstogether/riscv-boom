@@ -550,6 +550,31 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
    hfp_pipeline.io.dis_valids <> dis_valids
    hfp_pipeline.io.dis_uops <> dis_uops
+   if(DEBUG_PRINTF_HFPU){
+      printf("Core-----------------------------------------------\n")
+      printf("   Dispath out\n")
+      for(w <- 0 until DISPATCH_WIDTH){
+         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    dis.valid=[%d]\n",
+                 dis_uops(w).uopc,dis_uops(w).inst,dis_uops(w).hfp_val.asUInt, dis_uops(w).fu_code, dis_uops(w).iqtype, dis_uops(w).valid.asUInt,dis_valids.asUInt)
+         printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]\n",
+                 dis_uops(w).lrs1_rtype,dis_uops(w).lrs1,dis_uops(w).pop1, 
+                 dis_uops(w).lrs2_rtype,dis_uops(w).lrs2,dis_uops(w).pop2,
+                 dis_uops(w).lrs3_rtype,dis_uops(w).lrs3,dis_uops(w).pop3,
+                 dis_uops(w).dst_rtype,dis_uops(w).ldst,dis_uops(w).pdst,dis_uops(w).ldst_val.asUInt)
+      }
+      printf("   HfpPipeline in\n")
+      for(w <- 0 until DISPATCH_WIDTH){
+         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    dis.valid=[%d]\n",
+                 hfp_pipeline.io.dis_uops(w).uopc,hfp_pipeline.io.dis_uops(w).inst,
+                 hfp_pipeline.io.dis_uops(w).hfp_val.asUInt, hfp_pipeline.io.dis_uops(w).fu_code,
+                 hfp_pipeline.io.dis_uops(w).iqtype, hfp_pipeline.io.dis_uops(w).valid.asUInt,hfp_pipeline.io.dis_valids.asUInt)
+         printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]\n",
+                 hfp_pipeline.io.dis_uops(w).lrs1_rtype,hfp_pipeline.io.dis_uops(w).lrs1,hfp_pipeline.io.dis_uops(w).pop1, 
+                 hfp_pipeline.io.dis_uops(w).lrs2_rtype,hfp_pipeline.io.dis_uops(w).lrs2,hfp_pipeline.io.dis_uops(w).pop2,
+                 hfp_pipeline.io.dis_uops(w).lrs3_rtype,hfp_pipeline.io.dis_uops(w).lrs3,hfp_pipeline.io.dis_uops(w).pop3,
+                 hfp_pipeline.io.dis_uops(w).dst_rtype,hfp_pipeline.io.dis_uops(w).ldst,hfp_pipeline.io.dis_uops(w).pdst,hfp_pipeline.io.dis_uops(w).ldst_val.asUInt)
+      }
+   }
 
    // Output (Issue)
 
@@ -833,6 +858,34 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
             hfp_pipeline.io.ll_wport.bits.uop  := wbresp.bits.uop
             hfp_pipeline.io.ll_wport.bits.data := wbdata
             hfp_pipeline.io.ll_wport.bits.fflags.valid := Bool(false)
+
+ 
+           if(DEBUG_PRINTF_HFPU){
+              printf("Core--hfp_pipeline.io.ll_wport-----------------------------------------\n")
+              printf("    wbresp\n")
+              printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    ll_wport.valid=[%d]\n",
+                      wbresp.bits.uop.uopc,wbresp.bits.uop.inst,
+                      wbresp.bits.uop.hfp_val.asUInt,wbresp.bits.uop.fu_code,
+                      wbresp.bits.uop.iqtype,wbresp.bits.uop.valid.asUInt,wbIsValid(RT_FHT).asUInt)
+              printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]    wbdata=[%x]\n",
+                      wbresp.bits.uop.lrs1_rtype,wbresp.bits.uop.lrs1,wbresp.bits.uop.pop1, 
+                      wbresp.bits.uop.lrs2_rtype,wbresp.bits.uop.lrs2,wbresp.bits.uop.pop2,
+                      wbresp.bits.uop.lrs3_rtype,wbresp.bits.uop.lrs3,wbresp.bits.uop.pop3,
+                      wbresp.bits.uop.dst_rtype, wbresp.bits.uop.ldst,wbresp.bits.uop.pdst,wbresp.bits.uop.ldst_val.asUInt,wbdata)
+
+              printf("    hfp.ll_wport\n")
+              printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    ll_wport.valid=[%d]\n",
+                      hfp_pipeline.io.ll_wport.bits.uop.uopc,hfp_pipeline.io.ll_wport.bits.uop.inst,
+                      hfp_pipeline.io.ll_wport.bits.uop.hfp_val.asUInt,hfp_pipeline.io.ll_wport.bits.uop.fu_code,
+                      hfp_pipeline.io.ll_wport.bits.uop.iqtype,hfp_pipeline.io.ll_wport.bits.uop.valid.asUInt,hfp_pipeline.io.ll_wport.valid.asUInt)
+              printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]    wbdata=[%x]\n",
+                      hfp_pipeline.io.ll_wport.bits.uop.lrs1_rtype,hfp_pipeline.io.ll_wport.bits.uop.lrs1,hfp_pipeline.io.ll_wport.bits.uop.pop1, 
+                      hfp_pipeline.io.ll_wport.bits.uop.lrs2_rtype,hfp_pipeline.io.ll_wport.bits.uop.lrs2,hfp_pipeline.io.ll_wport.bits.uop.pop2,
+                      hfp_pipeline.io.ll_wport.bits.uop.lrs3_rtype,hfp_pipeline.io.ll_wport.bits.uop.lrs3,hfp_pipeline.io.ll_wport.bits.uop.pop3,
+                      hfp_pipeline.io.ll_wport.bits.uop.dst_rtype, hfp_pipeline.io.ll_wport.bits.uop.ldst,hfp_pipeline.io.ll_wport.bits.uop.pdst,hfp_pipeline.io.ll_wport.bits.uop.ldst_val.asUInt,
+                      hfp_pipeline.io.ll_wport.bits.data)
+              printf("Core--hfp_pipeline.io.ll_wport-----------------------------------------\n")
+           }
 
          }
          else
@@ -1179,6 +1232,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
       println("Whitespace padded: " + whitespace)
 
+      printf("\n\n\n\n")
       printf("--- Cyc=%d , ----------------- Ret: %d ----------------------------------"
          , debug_tsc_reg
          , debug_irt_reg & UInt(0xffffff))

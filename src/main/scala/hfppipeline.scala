@@ -115,6 +115,22 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    // **** Dispatch Stage ****
    //-------------------------------------------------------------
 
+   if(DEBUG_PRINTF_HFPU){
+      printf("HfpPipeline--IO---------------------------------------------\n")
+      for(w <- 0 until DISPATCH_WIDTH){
+         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    dis.valid=[%d]\n",
+                 io.dis_uops(w).uopc,io.dis_uops(w).inst,
+                 io.dis_uops(w).hfp_val.asUInt, io.dis_uops(w).fu_code,
+                 io.dis_uops(w).iqtype, io.dis_uops(w).valid.asUInt,io.dis_valids.asUInt)
+         printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]\n",
+                 io.dis_uops(w).lrs1_rtype,io.dis_uops(w).lrs1,io.dis_uops(w).pop1, 
+                 io.dis_uops(w).lrs2_rtype,io.dis_uops(w).lrs2,io.dis_uops(w).pop2,
+                 io.dis_uops(w).lrs3_rtype,io.dis_uops(w).lrs3,io.dis_uops(w).pop3,
+                 io.dis_uops(w).dst_rtype,io.dis_uops(w).ldst,io.dis_uops(w).pdst,io.dis_uops(w).ldst_val.asUInt)
+      }
+      printf("HfpPipeline--IO---------------------------------------------\n")
+   }
+
    // Input (Dispatch)
    for (w <- 0 until DISPATCH_WIDTH)
    {
@@ -131,6 +147,23 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       }
    }
    io.dis_readys := issue_unit.io.dis_readys
+
+   if(DEBUG_PRINTF_HFPU){
+      printf("HfpPipeline--Dispatch---------------------------------------------\n")
+      for(w <- 0 until DISPATCH_WIDTH){
+         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    dis.valid=[%d]\n",
+                 issue_unit.io.dis_uops(w).uopc,issue_unit.io.dis_uops(w).inst,
+                 issue_unit.io.dis_uops(w).hfp_val.asUInt, issue_unit.io.dis_uops(w).fu_code,
+                 issue_unit.io.dis_uops(w).iqtype, issue_unit.io.dis_uops(w).valid.asUInt,issue_unit.io.dis_valids.asUInt)
+         printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]\n",
+                 issue_unit.io.dis_uops(w).lrs1_rtype,issue_unit.io.dis_uops(w).lrs1,issue_unit.io.dis_uops(w).pop1, 
+                 issue_unit.io.dis_uops(w).lrs2_rtype,issue_unit.io.dis_uops(w).lrs2,issue_unit.io.dis_uops(w).pop2,
+                 issue_unit.io.dis_uops(w).lrs3_rtype,issue_unit.io.dis_uops(w).lrs3,issue_unit.io.dis_uops(w).pop3,
+                 issue_unit.io.dis_uops(w).dst_rtype,issue_unit.io.dis_uops(w).ldst,issue_unit.io.dis_uops(w).pdst,issue_unit.io.dis_uops(w).ldst_val.asUInt)
+      }
+      printf("HfpPipeline--Dispatch---------------------------------------------\n")
+   }
+
 
    //-------------------------------------------------------------
    // **** Issue Stage ****
@@ -151,6 +184,31 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       issue_unit.io.fu_types(i) := fu_types
 
       require (exe_units(i).uses_iss_unit)
+      if(DEBUG_PRINTF_HFPU){
+         printf("HfpPipeline--Issue Stage---------------------------------------------\n")
+         printf("    Iss_uops\n")
+         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    dis.valid=[%d]\n",
+                 iss_uops(i).uopc,iss_uops(i).inst,
+                 iss_uops(i).hfp_val.asUInt,iss_uops(i).fu_code,
+                 iss_uops(i).iqtype,iss_uops(i).valid.asUInt,iss_valids(i).asUInt)
+         printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]\n",
+                 iss_uops(i).lrs1_rtype,iss_uops(i).lrs1,iss_uops(i).pop1, 
+                 iss_uops(i).lrs2_rtype,iss_uops(i).lrs2,iss_uops(i).pop2,
+                 iss_uops(i).lrs3_rtype,iss_uops(i).lrs3,iss_uops(i).pop3,
+                 iss_uops(i).dst_rtype, iss_uops(i).ldst,iss_uops(i).pdst,iss_uops(i).ldst_val.asUInt)
+
+         printf("    Iss_unit\n")
+         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    dis.valid=[%d]\n",
+                 issue_unit.io.iss_uops(i).uopc,issue_unit.io.iss_uops(i).inst,
+                 issue_unit.io.iss_uops(i).hfp_val.asUInt,issue_unit.io.iss_uops(i).fu_code,
+                 issue_unit.io.iss_uops(i).iqtype,issue_unit.io.iss_uops(i).valid.asUInt,issue_unit.io.iss_valids(i).asUInt)
+         printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]\n",
+                 issue_unit.io.iss_uops(i).lrs1_rtype,issue_unit.io.iss_uops(i).lrs1,issue_unit.io.iss_uops(i).pop1, 
+                 issue_unit.io.iss_uops(i).lrs2_rtype,issue_unit.io.iss_uops(i).lrs2,issue_unit.io.iss_uops(i).pop2,
+                 issue_unit.io.iss_uops(i).lrs3_rtype,issue_unit.io.iss_uops(i).lrs3,issue_unit.io.iss_uops(i).pop3,
+                 issue_unit.io.iss_uops(i).dst_rtype, issue_unit.io.iss_uops(i).ldst,issue_unit.io.iss_uops(i).pdst,issue_unit.io.iss_uops(i).ldst_val.asUInt)
+         printf("HfpPipeline--Issue Stage---------------------------------------------\n")
+       }
    }
 
    // Wakeup
@@ -173,6 +231,43 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    fregister_read.io.brinfo := io.brinfo
    fregister_read.io.kill := io.flush_pipeline
 
+   if(DEBUG_PRINTF_HFPU){
+      printf("HfpPipeline--Register Read---------------------------------------------\n")
+      val rr_ports=exe_units.withFilter(_.uses_iss_unit).map(_.num_rf_read_ports).sum
+      for(w <- 0 until rr_ports){
+         printf("fregfile.io.read_ports.addr=[%d]    fregfile.io.read_ports.data=[%x]\n",
+                 fregfile.io.read_ports(w).addr,fregfile.io.read_ports(w).data)
+         printf("fregister_read.io.rf_read_ports.addr=[%d]    fregister_read.io.rf_read_ports.data=[%x]\n",
+                 fregister_read.io.rf_read_ports(w).addr,fregister_read.io.rf_read_ports(w).data)
+      }
+
+      printf("    Iss_uops\n")
+      for(w <- 0 until issue_unit.issue_width){
+         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    dis.valid=[%d]\n",
+                 iss_uops(w).uopc,iss_uops(w).inst,
+                 iss_uops(w).hfp_val.asUInt,iss_uops(w).fu_code,
+                 iss_uops(w).iqtype,iss_uops(w).valid.asUInt,iss_valids(w).asUInt)
+         printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]\n",
+                 iss_uops(w).lrs1_rtype,iss_uops(w).lrs1,iss_uops(w).pop1, 
+                 iss_uops(w).lrs2_rtype,iss_uops(w).lrs2,iss_uops(w).pop2,
+                 iss_uops(w).lrs3_rtype,iss_uops(w).lrs3,iss_uops(w).pop3,
+                 iss_uops(w).dst_rtype,iss_uops(w).ldst,iss_uops(w).pdst,iss_uops(w).ldst_val.asUInt)
+      }
+      printf("    fregister_read\n")
+      for(w <- 0 until issue_unit.issue_width){
+         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    dis.valid=[%d]\n",
+                 fregister_read.io.iss_uops(w).uopc,fregister_read.io.iss_uops(w).inst,
+                 fregister_read.io.iss_uops(w).hfp_val.asUInt,fregister_read.io.iss_uops(w).fu_code,
+                 fregister_read.io.iss_uops(w).iqtype,fregister_read.io.iss_uops(w).valid.asUInt,fregister_read.io.iss_valids.asUInt)
+         printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]\n",
+                 fregister_read.io.iss_uops(w).lrs1_rtype,fregister_read.io.iss_uops(w).lrs1,fregister_read.io.iss_uops(w).pop1, 
+                 fregister_read.io.iss_uops(w).lrs2_rtype,fregister_read.io.iss_uops(w).lrs2,fregister_read.io.iss_uops(w).pop2,
+                 fregister_read.io.iss_uops(w).lrs3_rtype,fregister_read.io.iss_uops(w).lrs3,fregister_read.io.iss_uops(w).pop3,
+                 fregister_read.io.iss_uops(w).dst_rtype,fregister_read.io.iss_uops(w).ldst,fregister_read.io.iss_uops(w).pdst,fregister_read.io.iss_uops(w).ldst_val.asUInt)
+      }
+
+      printf("HfpPipeline--Register Read---------------------------------------------\n")
+   }
 
    //-------------------------------------------------------------
    // **** Execute Stage ****
@@ -181,10 +276,43 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    exe_units.map(_.io.brinfo := io.brinfo)
    exe_units.map(_.io.com_exception := io.flush_pipeline)
 
+   if(DEBUG_PRINTF_HFPU){
+      printf("HfpPipeline--Execute Stage---------------------------------------------\n")
+      printf("    fregister_read\n")
+      for(w <- 0 until issue_unit.issue_width){
+         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]\n",
+                 fregister_read.io.exe_reqs(w).bits.uop.uopc,fregister_read.io.exe_reqs(w).bits.uop.inst,
+                 fregister_read.io.exe_reqs(w).bits.uop.hfp_val.asUInt,fregister_read.io.exe_reqs(w).bits.uop.fu_code,
+                 fregister_read.io.exe_reqs(w).bits.uop.iqtype,fregister_read.io.exe_reqs(w).bits.uop.valid.asUInt)
+         printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]\n",
+                 fregister_read.io.exe_reqs(w).bits.uop.lrs1_rtype,fregister_read.io.exe_reqs(w).bits.uop.lrs1,fregister_read.io.exe_reqs(w).bits.uop.pop1, 
+                 fregister_read.io.exe_reqs(w).bits.uop.lrs2_rtype,fregister_read.io.exe_reqs(w).bits.uop.lrs2,fregister_read.io.exe_reqs(w).bits.uop.pop2,
+                 fregister_read.io.exe_reqs(w).bits.uop.lrs3_rtype,fregister_read.io.exe_reqs(w).bits.uop.lrs3,fregister_read.io.exe_reqs(w).bits.uop.pop3,
+                 fregister_read.io.exe_reqs(w).bits.uop.dst_rtype, fregister_read.io.exe_reqs(w).bits.uop.ldst,fregister_read.io.exe_reqs(w).bits.uop.pdst,fregister_read.io.exe_reqs(w).bits.uop.ldst_val.asUInt)
+      }
+     printf("HfpPipeline--Execute Stage---------------------------------------------\n")
+   }
+
    for ((ex,w) <- exe_units.withFilter(_.uses_iss_unit).map(x=>x).zipWithIndex)
    {
       ex.io.req <> fregister_read.io.exe_reqs(w)
       require (!ex.isBypassable)
+
+      if(DEBUG_PRINTF_HFPU){
+         printf("HfpPipeline--Execute Stage---------------------------------------------\n")
+         printf("    Exe_units\n")
+         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]\n",
+                 ex.io.req.bits.uop.uopc,ex.io.req.bits.uop.inst,
+                 ex.io.req.bits.uop.hfp_val.asUInt,ex.io.req.bits.uop.fu_code,
+                 ex.io.req.bits.uop.iqtype,ex.io.req.bits.uop.valid.asUInt)
+         printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]\n",
+                 ex.io.req.bits.uop.lrs1_rtype,ex.io.req.bits.uop.lrs1,ex.io.req.bits.uop.pop1, 
+                 ex.io.req.bits.uop.lrs2_rtype,ex.io.req.bits.uop.lrs2,ex.io.req.bits.uop.pop2,
+                 ex.io.req.bits.uop.lrs3_rtype,ex.io.req.bits.uop.lrs3,ex.io.req.bits.uop.pop3,
+                 ex.io.req.bits.uop.dst_rtype,ex.io.req.bits.uop.ldst,ex.io.req.bits.uop.pdst,ex.io.req.bits.uop.ldst_val.asUInt)
+          printf("HfpPipeline--Execute Stage---------------------------------------------\n")
+       }
+
 
       if(DEBUG_PRINTF_HFPU){
          printf("HfpPipeline-Start--------------------------------------------------------------------------------------------\n")
@@ -228,6 +356,35 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
    // Hookup load writeback -- and recode FP values.
    ll_wbarb.io.in(0) <> io.ll_wport
+
+   if(DEBUG_PRINTF_HFPU){
+      printf("HfpPipeline--Writeback Stage--ll_wport-----------------------------------------\n")
+      printf("    ll_wbarb.io.in(0)\n")
+      printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    ll_wport.valid=[%d]\n",
+              ll_wbarb.io.in(0).bits.uop.uopc,          ll_wbarb.io.in(0).bits.uop.inst,
+              ll_wbarb.io.in(0).bits.uop.hfp_val.asUInt,ll_wbarb.io.in(0).bits.uop.fu_code,
+              ll_wbarb.io.in(0).bits.uop.iqtype,        ll_wbarb.io.in(0).bits.uop.valid.asUInt,ll_wbarb.io.in(0).valid.asUInt)
+      printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---ll_wbarb.io.in(0).%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]    wbdata=[%x]\n",
+              ll_wbarb.io.in(0).bits.uop.lrs1_rtype, ll_wbarb.io.in(0).bits.uop.lrs1,ll_wbarb.io.in(0).bits.uop.pop1, 
+              ll_wbarb.io.in(0).bits.uop.lrs2_rtype, ll_wbarb.io.in(0).bits.uop.lrs2,ll_wbarb.io.in(0).bits.uop.pop2,
+              ll_wbarb.io.in(0).bits.uop.lrs3_rtype, ll_wbarb.io.in(0).bits.uop.lrs3,ll_wbarb.io.in(0).bits.uop.pop3,
+              ll_wbarb.io.in(0).bits.uop.dst_rtype,  ll_wbarb.io.in(0).bits.uop.ldst,ll_wbarb.io.in(0).bits.uop.pdst,ll_wbarb.io.in(0).bits.uop.ldst_val.asUInt,ll_wbarb.io.in(0).bits.data)
+
+      printf("    io.ll_wport\n")
+      printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    ll_wport.valid=[%d]\n",
+              io.ll_wport.bits.uop.uopc,io.ll_wport.bits.uop.inst,
+              io.ll_wport.bits.uop.hfp_val.asUInt,io.ll_wport.bits.uop.fu_code,
+              io.ll_wport.bits.uop.iqtype,io.ll_wport.bits.uop.valid.asUInt,io.ll_wport.valid.asUInt)
+      printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]    wbdata=[%x]\n",
+              io.ll_wport.bits.uop.lrs1_rtype,io.ll_wport.bits.uop.lrs1,io.ll_wport.bits.uop.pop1, 
+              io.ll_wport.bits.uop.lrs2_rtype,io.ll_wport.bits.uop.lrs2,io.ll_wport.bits.uop.pop2,
+              io.ll_wport.bits.uop.lrs3_rtype,io.ll_wport.bits.uop.lrs3,io.ll_wport.bits.uop.pop3,
+              io.ll_wport.bits.uop.dst_rtype, io.ll_wport.bits.uop.ldst,io.ll_wport.bits.uop.pdst,io.ll_wport.bits.uop.ldst_val.asUInt,
+              io.ll_wport.bits.data)
+      printf("HfpPipeline--Writeback Stage--ll_wport-----------------------------------------\n")
+   }
+
+
    val typ = io.ll_wport.bits.uop.mem_typ
    val load_single = typ === rocket.MT_W || typ === rocket.MT_WU
    //val rec_s = hardfloat.recFNFromFN( 8, 24, io.ll_wport.bits.data)
@@ -236,7 +393,11 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    //val fp_load_data_recoded = Mux(load_single, Cat(SInt(-1, 32), rec_s), rec_d)
    val hfp_load_data_recoded = Cat(SInt(-1, 48), rec_h)
    ll_wbarb.io.in(0).bits.data := hfp_load_data_recoded
-
+   if(DEBUG_PRINTF_HFPU){
+      printf("HfpPipeline--Writeback Stage--ll_wbarb.io.in(0).bits.data\n")
+      printf("ll_wbarb.io.in(0).bits.data=[%x]\n",ll_wbarb.io.in(0).bits.data)
+      printf("HfpPipeline--Writeback Stage--ll_wbarb.io.in(0).bits.data\n")
+   }
    ll_wbarb.io.in(1) <> ihfpu_resp
    ll_wbarb.io.in(2) <> fphfpu_resp
    ll_wbarb.io.in(1).valid := ihfpu_resp.valid && ihfpu_resp.bits.uop.dst_rtype === RT_FLT
@@ -292,27 +453,35 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
             fregfile.io.write_ports(w_cnt).bits.addr := wbresp.bits.uop.pdst
             fregfile.io.write_ports(w_cnt).bits.data := wbresp.bits.data
             wbresp.ready := fregfile.io.write_ports(w_cnt).ready
-         if(DEBUG_PRINTF_HFPU){
-            printf("HfpPipeline-Start--------------------------------------------------------------------------------------------\n")
-            printf("wbresp.data=[%x]    wbresp.valid=[%d]\n",wbresp.bits.data,wbresp.ready.asUInt);
-            printf("fregfile.io.write_ports.bits.data=[%x]    fregfile.io.write_ports.valid=[%d]\n",
-                    fregfile.io.write_ports(w_cnt).bits.data,fregfile.io.write_ports(w_cnt).ready.asUInt);
-            printf("HfpPipeline-End--------------------------------------------------------------------------------------------\n")
-         }
-
-
+            if(DEBUG_PRINTF_HFPU){
+               printf("HfpPipeline--Writeback Stage--write to hfp reg------------------------------------------------------------------------------------------\n")
+               printf("    wbresp\n")
+               printf("    wbresp.valid=[%d]    wbresp.bits.uop.ctrl.rf_wen=[%d]    wbresp.bits.uop.pdst=[%x]    wbresp.bits.data=[%x]    wbresp.ready=[%d]\n",
+                       wbresp.valid.asUInt, wbresp.bits.uop.ctrl.rf_wen,        wbresp.bits.uop.pdst,        wbresp.bits.data,        wbresp.ready.asUInt);
+               printf("     wbresp.bits.uop.uopc=[%d]    wbresp.bits.uop.fu_code=[%d]\n",wbresp.bits.uop.uopc,wbresp.bits.uop.fu_code)
+               printf("     fregfile.io.write_ports(%d)\n",UInt(w_cnt))
+               printf("     fregfile.io.write_ports.valid=[%d]    fregfile.io.write_ports.bits.addr=[%x]    fregfile.io.write_ports.bits.data=[%x]    fregfile.io.write_ports.ready=[%d]\n",
+                       fregfile.io.write_ports(w_cnt).valid.asUInt,fregfile.io.write_ports(w_cnt).bits.addr,fregfile.io.write_ports(w_cnt).bits.data,fregfile.io.write_ports(w_cnt).ready.asUInt);
+               printf("HfpPipeline--Writeback stage--write to hfp reg--------------------------------------------------------------------------------------------\n")
+            }
          }
 
          assert (!(wbresp.valid &&
             !wbresp.bits.uop.ctrl.rf_wen &&
             wbresp.bits.uop.dst_rtype === RT_FHT),
-            "[fppipeline] An FP writeback is being attempted with rf_wen disabled.")
+            "[hfppipeline] An HFP writeback is being attempted with rf_wen disabled.")
+         if(DEBUG_PRINTF_HFPU){
+            printf("HfpPipeline--Writeback Stage--assert---\n")
+            printf("wbresp.valid=[%d]    wbresp.bits.uop.ctrl.rf_wen=[%d]    wbresp.bits.uop.dst_rtype=[%d]",
+                    wbresp.valid.asUInt, wbresp.bits.uop.ctrl.rf_wen.asUInt, wbresp.bits.uop.dst_rtype)
+            printf("HfpPipeline--Writeback Stage--assert---\n")
+         }
 
          assert (!(wbresp.valid &&
             wbresp.bits.uop.ctrl.rf_wen &&
             wbresp.bits.uop.dst_rtype =/= RT_FHT &&
-            !toint),
-            "[fppipeline] A writeback is being attempted to the FP RF with dst != FP type.")
+            !toint && !tofp),
+            "[hfppipeline] A writeback is being attempted to the HFP RF with dst != HFP type.")
 
          if (!wbresp.bits.writesToIRF && !(eu.has_ihfpu || eu.has_fphfpu) && !wbresp.bits.writesToFRF) w_cnt += 1
       }
@@ -329,6 +498,33 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    io.wakeups(0) <> ll_wbarb.io.out
    ll_wbarb.io.out.ready := Bool(true)
    assert( !(io.wakeups(0).valid) || (io.wakeups(0).valid && io.wakeups(0).bits.uop.dst_rtype === RT_FHT))
+   if(DEBUG_PRINTF_HFPU){
+      printf("HfpPipeline--ll_wport-----------------------------------------\n")
+      printf("    ll_wbarb.io.out\n")
+      printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    ll_wport.valid=[%d]\n",
+              ll_wbarb.io.out.bits.uop.uopc,          ll_wbarb.io.out.bits.uop.inst,
+              ll_wbarb.io.out.bits.uop.hfp_val.asUInt,ll_wbarb.io.out.bits.uop.fu_code,
+              ll_wbarb.io.out.bits.uop.iqtype,        ll_wbarb.io.out.bits.uop.valid.asUInt,ll_wbarb.io.out.valid.asUInt)
+      printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---ll_wbarb.io.in(0).%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]    wbdata=[%x]\n",
+              ll_wbarb.io.out.bits.uop.lrs1_rtype, ll_wbarb.io.out.bits.uop.lrs1,ll_wbarb.io.out.bits.uop.pop1, 
+              ll_wbarb.io.out.bits.uop.lrs2_rtype, ll_wbarb.io.out.bits.uop.lrs2,ll_wbarb.io.out.bits.uop.pop2,
+              ll_wbarb.io.out.bits.uop.lrs3_rtype, ll_wbarb.io.out.bits.uop.lrs3,ll_wbarb.io.out.bits.uop.pop3,
+              ll_wbarb.io.out.bits.uop.dst_rtype,  ll_wbarb.io.out.bits.uop.ldst,ll_wbarb.io.out.bits.uop.pdst,ll_wbarb.io.out.bits.uop.ldst_val.asUInt,ll_wbarb.io.out.bits.data)
+
+      printf("    io.wakeups(0)\n")
+      printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    ll_wport.valid=[%d]\n",
+              io.wakeups(0).bits.uop.uopc,io.wakeups(0).bits.uop.inst,
+              io.wakeups(0).bits.uop.hfp_val.asUInt,io.wakeups(0).bits.uop.fu_code,
+              io.wakeups(0).bits.uop.iqtype,io.wakeups(0).bits.uop.valid.asUInt,io.wakeups(0).valid.asUInt)
+      printf("uop.lrs1=[%d---%d---%d]    uop.lrs2=[%d---%d---%d]    uop.lrs3=[%d---%d---%d]    uop.dst=[%d---%d---%d---%d]    wbdata=[%x]\n",
+              io.wakeups(0).bits.uop.lrs1_rtype,io.wakeups(0).bits.uop.lrs1,io.wakeups(0).bits.uop.pop1, 
+              io.wakeups(0).bits.uop.lrs2_rtype,io.wakeups(0).bits.uop.lrs2,io.wakeups(0).bits.uop.pop2,
+              io.wakeups(0).bits.uop.lrs3_rtype,io.wakeups(0).bits.uop.lrs3,io.wakeups(0).bits.uop.pop3,
+              io.wakeups(0).bits.uop.dst_rtype, io.wakeups(0).bits.uop.ldst,io.wakeups(0).bits.uop.pdst,io.wakeups(0).bits.uop.ldst_val.asUInt,
+              io.wakeups(0).bits.data)
+      printf("HfpPipeline--ll_wport-----------------------------------------\n")
+   }
+
 
    w_cnt = 1
    for (eu <- exe_units)

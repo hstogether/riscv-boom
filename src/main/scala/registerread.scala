@@ -96,7 +96,7 @@ class RegisterRead(
 
    require (num_total_read_ports == num_read_ports_array.reduce(_+_))
 
-   val regwidth = if (usingFPU) 65 else 64
+   val regwidth = if (usingFPU || usingHFPU) 65 else 64
    val rrd_rs1_data   = Wire(Vec(issue_width, Bits(width=regwidth)))
    val rrd_rs2_data   = Wire(Vec(issue_width, Bits(width=regwidth)))
    val rrd_rs3_data   = Wire(Vec(issue_width, Bits(width=regwidth)))
@@ -205,5 +205,14 @@ class RegisterRead(
       if (num_read_ports > 0) io.exe_reqs(w).bits.rs1_data := exe_reg_rs1_data(w)
       if (num_read_ports > 1) io.exe_reqs(w).bits.rs2_data := exe_reg_rs2_data(w)
       if (num_read_ports > 2) io.exe_reqs(w).bits.rs3_data := exe_reg_rs3_data(w)
+   }
+
+   if(DEBUG_PRINTF_REGREAD){
+      printf("RegisterRead-----------------------------------------------------\n")
+      for(w <- 0 until issue_width){
+         printf("    rs1=[%x]    rs2=[%x]    rs3=[%x]    fucode=[%d]\n",
+                 exe_reg_rs1_data(w),exe_reg_rs2_data(w),exe_reg_rs3_data(w),exe_reg_uops(w).fu_code.asUInt) 
+      }
+      printf("\n")
    }
 }
