@@ -468,8 +468,15 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
         if(DEBUG_PRINTF_HFPU){
             printf("HfpPipeline--Writeback Stage--assert---\n")
-            printf("wbresp.valid=[%d]    wbresp.bits.uop.ctrl.rf_wen=[%d]    wbresp.bits.uop.dst_rtype=[%d]",
+            printf("     wbresp.valid=[%d]    wbresp.bits.uop.ctrl.rf_wen=[%d]    wbresp.bits.uop.dst_rtype=[%d]\n",
                     wbresp.valid.asUInt, wbresp.bits.uop.ctrl.rf_wen.asUInt, wbresp.bits.uop.dst_rtype)
+            printf("     wbresp.bits.uop.uopc=[%d]    wbresp.bits.uop.fu_code=[%d]\n",wbresp.bits.uop.uopc,wbresp.bits.uop.fu_code)
+            printf("     Function unit is =[%d]\n",
+                   Mux(Bool(wbresp.bits.writesToIRF) && toint, Bits(0),
+                       Mux(Bool(wbresp.bits.writesToFRF) && tofp, Bits(1),
+                           Mux(Bool(eu.has_ihfpu), Bits(2),
+                               Mux(Bool(eu.has_fphfpu), Bits(3),
+                                   Bits(4))))))
             printf("HfpPipeline--Writeback Stage--assert---\n")
          }
          assert (!(wbresp.valid &&
