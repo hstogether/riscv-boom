@@ -166,7 +166,8 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
       printf("req.rs1=[%x]    req.rs2=[%x]    req.rs3=[%x]\n",io_req.rs1_data,io_req.rs2_data,io_req.rs3_data);
       printf("hfma.io.rs1=[%x]    hfma.io.rs2=[%x]    hfma.io.rs3=[%x]\n",hfma.io.in.bits.in1,hfma.io.in.bits.in2,hfma.io.in.bits.in3);
       printf("hfma.io.out=[%x]    hfma.io.out.valid=[%d]\n",hfma.io.out.bits.data,hfma.io.out.valid.asUInt);
-      printf("resp.data=[%x]    resp.valid=[%d]\n",io.resp.bits.data,io.resp.bits.fflags.valid.asUInt);
+      printf("resp.data=[%x]    resp.valid=[%d]\n",io.resp.bits.data,io.resp.valid.asUInt);
+      printf("hfpiu_out.valid=[%d]    hfpu.io.out.valid=[%d]    hfma.io.out.valid=[%d]\n",hfpiu_out.valid.asUInt,hfpmu.io.out.valid.asUInt,hfma.io.out.valid.asUInt)
       printf("HFPU-End--------------------------------------------------------------------------------------------\n")
    }
 

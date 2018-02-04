@@ -251,6 +251,57 @@ object FpuRRdDecode extends RRdDecodeConstants
 }
  
 
+object HfpuRRdDecode extends RRdDecodeConstants
+{
+   val table: Array[(BitPat, List[BitPat])] =
+              Array[(BitPat, List[BitPat])](
+                               // br type
+                               // |      use alu pipe              op1 sel   op2 sel
+                               // |      |  use muldiv pipe        |         |         immsel       csr_cmd
+                               // |      |  |  use mem pipe        |         |         |     rf wen |
+                               // |      |  |  |  alu fcn  wd/word?|         |         |     |      |
+                               // |      |  |  |  |        |       |         |         |     |      |
+         BitPat(uopFCLASS_H)->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+//         BitPat(uopFMV_S_X)->List(BR_N , Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+//         BitPat(uopFMV_D_X)->List(BR_N , Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFMV_X_H)->List(BR_N , Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFSGNJ_H)->List(BR_N , Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFCVT_S_H) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_D_H) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+// TODO uopFCVT_H_D/H_S
+
+// TODO comment out I2F instructions.
+         BitPat(uopFCVT_H_W) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_H_WU)->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_H_L) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_H_LU)->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFCVT_W_H) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_WU_H)->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_L_H) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_LU_H)->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFEQ_H)   ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFLT_H)   ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFLE_H)   ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFMIN_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFMAX_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFADD_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFSUB_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFMUL_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFMADD_H) ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFMSUB_H) ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFNMADD_H)->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFNMSUB_H)->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N))
+}
+ 
+
+
 object IfmvRRdDecode extends RRdDecodeConstants
 {
    val table: Array[(BitPat, List[BitPat])] =
@@ -275,6 +326,40 @@ object IfmvRRdDecode extends RRdDecodeConstants
 }
 
  
+object IhfmvRRdDecode extends RRdDecodeConstants
+{
+   val table: Array[(BitPat, List[BitPat])] =
+              Array[(BitPat, List[BitPat])](
+                               // br type
+                               // |      use alu pipe              op1 sel   op2 sel
+                               // |      |  use muldiv pipe        |         |         immsel       csr_cmd
+                               // |      |  |  use mem pipe        |         |         |     rf wen |
+                               // |      |  |  |  alu fcn  wd/word?|         |         |     |      |
+                               // |      |  |  |  |        |       |         |         |     |      |
+         BitPat(uopFMV_H_X)->List(BR_N , Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopFCVT_H_W) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_H_WU)->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_H_L) ->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_H_LU)->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N))
+}
+
+ 
+object FhfmvRRdDecode extends RRdDecodeConstants
+{
+   val table: Array[(BitPat, List[BitPat])] =
+              Array[(BitPat, List[BitPat])](
+                               // br type
+                               // |      use alu pipe              op1 sel   op2 sel
+                               // |      |  use muldiv pipe        |         |         immsel       csr_cmd
+                               // |      |  |  use mem pipe        |         |         |     rf wen |
+                               // |      |  |  |  alu fcn  wd/word?|         |         |     |      |
+                               // |      |  |  |  |        |       |         |         |     |      |
+         BitPat(uopFCVT_H_S)->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFCVT_H_D)->List(BR_N,Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N))
+}
+
+
 
 object FDivRRdDecode extends RRdDecodeConstants
 {
@@ -290,6 +375,20 @@ object FDivRRdDecode extends RRdDecodeConstants
          BitPat(uopFDIV_D)  ->List(BR_N, N, Y, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
          BitPat(uopFSQRT_S) ->List(BR_N, N, Y, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
          BitPat(uopFSQRT_D) ->List(BR_N, N, Y, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N))
+}
+
+object HfDivRRdDecode extends RRdDecodeConstants
+{
+   val table: Array[(BitPat, List[BitPat])] =
+              Array[(BitPat, List[BitPat])](
+                               // br type
+                               // |      use alu pipe              op1 sel   op2 sel
+                               // |      |  use muldiv pipe        |         |         immsel       csr_cmd
+                               // |      |  |  use mem pipe        |         |         |     rf wen |
+                               // |      |  |  |  alu fcn  wd/word?|         |         |     |      |
+                               // |      |  |  |  |        |       |         |         |     |      |
+         BitPat(uopFDIV_H)  ->List(BR_N, N, Y, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFSQRT_H) ->List(BR_N, N, Y, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N))
 }
 
 class RegisterReadDecode(supported_units: SupportedFuncUnits)(implicit p: Parameters) extends BoomModule()(p)
@@ -315,6 +414,10 @@ class RegisterReadDecode(supported_units: SupportedFuncUnits)(implicit p: Parame
    if (supported_units.fpu) dec_table ++= FpuRRdDecode.table
    if (supported_units.fdiv) dec_table ++= FDivRRdDecode.table
    if (supported_units.ifpu) dec_table ++= IfmvRRdDecode.table
+   if (supported_units.hfpu) dec_table ++= HfpuRRdDecode.table
+   if (supported_units.hfdiv) dec_table ++= HfDivRRdDecode.table
+   if (supported_units.fphfpu) dec_table ++= FhfmvRRdDecode.table
+   if (supported_units.ihfpu) dec_table ++= IhfmvRRdDecode.table
    val rrd_cs = Wire(new RRdCtrlSigs()).decode(io.rrd_uop.uopc, dec_table)
 
    // rrd_use_alupipe is unused

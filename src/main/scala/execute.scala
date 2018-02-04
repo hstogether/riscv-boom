@@ -553,8 +553,9 @@ class HFPUExeUnit(
          printf("HFPUExeUnit-Start--------------------------------------------------------------------------------------------\n")
          printf("io.req.rs1=[%x]    io.req.rs2=[%x]    io.req.rs3=[%x]\n",
                  io.req.bits.rs1_data,io.req.bits.rs2_data,io.req.bits.rs3_data);
-         printf("hfpu.io.req.rs1=[%x]    hfpu.io.req.rs2=[%x]    hfpu.io.req.rs3=[%x]\n",
-                 hfpu.io.req.bits.rs1_data,hfpu.io.req.bits.rs2_data,hfpu.io.req.bits.rs3_data);
+         printf("hfpu.io.req.valid=[%d]    hfpu.io.req.rs1=[%x]    hfpu.io.req.rs2=[%x]    hfpu.io.req.rs3=[%x]\n",
+                 hfpu.io.req.valid.asUInt,hfpu.io.req.bits.rs1_data,hfpu.io.req.bits.rs2_data,hfpu.io.req.bits.rs3_data);
+         printf("hfpu.io.resp.valid=[%d]\n",hfpu.io.resp.valid.asUInt)
          printf("HFPUExeUnit-End--------------------------------------------------------------------------------------------\n")
       }
 
@@ -596,8 +597,8 @@ class HFPUExeUnit(
    // Outputs (Write Port #0)  ---------------
 
    io.resp(0).valid    := fu_units.map(_.io.resp.valid).reduce(_|_) &&
-                          !(hfpu.io.resp.valid && hfpu.io.resp.bits.uop.fu_code_is(FU_HF2I) ||
-                            hfpu.io.resp.bits.uop.fu_code_is(FU_HF2F))
+                          !((hfpu.io.resp.valid && hfpu.io.resp.bits.uop.fu_code_is(FU_HF2I)) ||
+                            (hfpu.io.resp.valid && hfpu.io.resp.bits.uop.fu_code_is(FU_HF2F)))
    io.resp(0).bits.uop := new MicroOp().fromBits(
                            PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.uop.asUInt))))
    io.resp(0).bits.data:= PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.data.asUInt))).asUInt
@@ -605,6 +606,7 @@ class HFPUExeUnit(
 
    if(DEBUG_PRINTF_HFPU){
       printf("HFPUExeUnit-Start--------------------------------------------------------------------------------------------\n")
+      printf("hfpu_resp_val=[%d]    hfdiv_resp_val=[%d]    fu_units.map(_.io.resp.valid).reduce(_|_)=[%d]\n",hfpu_resp_val.asUInt,hfdiv_resp_val.asUInt,fu_units.map(_.io.resp.valid).reduce(_|_).asUInt)
       printf("io.resp[0].data=[%x]    io.resp[0].valid=[%d]\n",io.resp(0).bits.data,io.resp(0).valid.asUInt);
       printf("HFPUExeUnit-End--------------------------------------------------------------------------------------------\n")
    }
