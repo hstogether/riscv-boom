@@ -444,6 +444,13 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       if (exe_units(i).is_mem_unit)
       {
          // If Memory, it's the shared long-latency port.
+         if(DEBUG_PRINTF_HFPU){
+            if(wu_idx==0){
+               printf("Core-int_wakeups_index--------------------------\n")
+               printf("wu_idx=[%d]   exe_units=[mem_unit]\n",UInt(wu_idx))
+               printf("Core-int_wakeups_index--------------------------\n")
+            }
+         }
          int_wakeups(wu_idx).valid := ll_wbarb.io.out.fire()
          int_wakeups(wu_idx).bits  := ll_wbarb.io.out.bits
          wu_idx += 1
@@ -453,6 +460,14 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
          // Fast Wakeup (uses just-issued uops) that have known latencies
          if (exe_units(i).isBypassable)
          {
+            if(DEBUG_PRINTF_HFPU){
+               if(wu_idx==0){
+                  printf("Core-int_wakeups_index--------------------------\n")
+                  printf("wu_idx=[%d]   exe_units=[Bypassable]\n",UInt(wu_idx))
+                  printf("Core-int_wakeups_index--------------------------\n")
+               }
+            }
+
             int_wakeups(wu_idx).valid := iss_valids(i) &&
                                          iss_uops(i).bypassable &&
                                          iss_uops(i).dst_rtype === RT_FIX &&
@@ -465,6 +480,14 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
          // Slow Wakeup (uses write-port to register file)
          for (j <- 0 until exe_units(i).num_rf_write_ports)
          {
+               if(DEBUG_PRINTF_HFPU){
+                  if(wu_idx==0){
+                     printf("Core-int_wakeups_index--------------------------\n")
+                     printf("wu_idx=[%d]   exe_units=[num_rf_write_ports %d ]\n",UInt(wu_idx),UInt(j))
+                     printf("Core-int_wakeups_index--------------------------\n")
+                  }
+               }
+
             val resp = exe_units(i).io.resp(j)
             int_wakeups(wu_idx).valid := resp.valid &&
                                          resp.bits.uop.ctrl.rf_wen &&
@@ -928,7 +951,10 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
    assert (ll_wbarb.io.in(0).ready) // never backpressure the memory unit.
    ll_wbarb.io.in(1) <> fp_pipeline.io.toint
+   iregfile.io.write_ports(llidx) <> WritePort(ll_wbarb.io.out, IPREG_SZ, xLen)
    // TODO: enable hfp2i and fix the bug in rob.scala 611
+   assert (ll_wbarb.io.in(0).ready) // never backpressure the memory unit.
+   //assert (ll_wbarb.io.in(1).ready) // never backpressure the fp2i unit.
    ll_wbarb.io.in(2) <> hfp_pipeline.io.toint
    //ll_wbarb.io.in(1).valid := fp_pipeline.io.toint.valid && fp_pipeline.io.toint.bits.uop.dst_rtype === RT_FIX
    //ll_wbarb.io.in(1).bits := fp_pipeline.io.toint.bits

@@ -311,6 +311,15 @@ class RenameStage(
    ibusytable.io.wb_valids := io.int_wakeups.map(_.valid)
    ibusytable.io.wb_pdsts := io.int_wakeups.map(_.bits.uop.pdst)
 
+   if(DEBUG_PRINTF_HFPU){
+      printf("rename.scala--assert-----------------------------------------\n")
+      for(iwakeup <- io.int_wakeups){
+         printf("io.int_wakeups.valid=[%d]    io.int_wakeups.bits.uop.dst_rtype=[%d]    io.int_wakeups.bits.uop.uopc=[%d]\n",
+                iwakeup.valid.asUInt,iwakeup.bits.uop.dst_rtype,iwakeup.bits.uop.uopc)
+      }
+      printf("rename.scala--assert-----------------------------------------\n")
+   }
+
    assert (!(io.int_wakeups.map(x => x.valid && x.bits.uop.dst_rtype =/= RT_FIX).reduce(_|_)),
       "[rename] int wakeup is not waking up a Int register.")
 

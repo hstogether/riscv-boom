@@ -606,8 +606,10 @@ class HFPUExeUnit(
 
    if(DEBUG_PRINTF_HFPU){
       printf("HFPUExeUnit-Start--------------------------------------------------------------------------------------------\n")
-      printf("hfpu_resp_val=[%d]    hfdiv_resp_val=[%d]    fu_units.map(_.io.resp.valid).reduce(_|_)=[%d]\n",hfpu_resp_val.asUInt,hfdiv_resp_val.asUInt,fu_units.map(_.io.resp.valid).reduce(_|_).asUInt)
-      printf("io.resp[0].data=[%x]    io.resp[0].valid=[%d]\n",io.resp(0).bits.data,io.resp(0).valid.asUInt);
+      printf("hfpu_resp_val=[%d]    hfdiv_resp_val=[%d]    fu_units.map(_.io.resp.valid).reduce(_|_)=[%d]\n",
+              hfpu_resp_val.asUInt, hfdiv_resp_val.asUInt, fu_units.map(_.io.resp.valid).reduce(_|_).asUInt)
+      printf("io.resp[0].uop.uopc=[%d]    io.resp[0].uop.dst_rtype=[%d]    io.resp[0].data=[%x]    io.resp[0].valid=[%d]\n",
+              io.resp(0).bits.uop.uopc,   io.resp(0).bits.uop.dst_rtype,   io.resp(0).bits.data,   io.resp(0).valid.asUInt);
       printf("HFPUExeUnit-End--------------------------------------------------------------------------------------------\n")
    }
  

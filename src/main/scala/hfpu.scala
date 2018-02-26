@@ -130,7 +130,7 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
 
 
    val hfma = Module(new tile.FPUFMAPipe(latency = hfpu_latency, expWidth = 5, sigWidth = 11))
-   hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && req.typ === Bits(2)
+   hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && hfp_ctrl.half && !hfp_ctrl.single // TODO:FCVT ??  req.typ === Bits(2)
    hfma.io.in.bits := req
 
 
@@ -163,11 +163,18 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
 
    if(DEBUG_PRINTF_HFPU){
       printf("HFPU-Start--------------------------------------------------------------------------------------------\n")
-      printf("req.rs1=[%x]    req.rs2=[%x]    req.rs3=[%x]\n",io_req.rs1_data,io_req.rs2_data,io_req.rs3_data);
-      printf("hfma.io.rs1=[%x]    hfma.io.rs2=[%x]    hfma.io.rs3=[%x]\n",hfma.io.in.bits.in1,hfma.io.in.bits.in2,hfma.io.in.bits.in3);
+      printf("io.req.bits.uop.uopc=[%d]    req.cmd=[%d]    req.rs1=[%x]    req.rs2=[%x]    req.rs3=[%x]\n",
+              io_req.uop.uopc,             req.cmd,        io_req.rs1_data,io_req.rs2_data,io_req.rs3_data);
+      printf("  hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && hfp_ctrl.half && !hfp_ctrl.single\n")
+      printf("  %d                  %d              %d              %d               %d\n",
+                hfma.io.in.valid.asUInt,io.req.valid.asUInt,hfp_ctrl.fma.asUInt,hfp_ctrl.half.asUInt,(!hfp_ctrl.single).asUInt)
+      printf("  io_req.uop.imm_packed=[%d]    ImmGenTyp(io_req.uop.imm_packed)=[%d]    req.typ=[%d]\n",
+                io_req.uop.imm_packed,        ImmGenTyp(io_req.uop.imm_packed),        req.typ)
+      printf("hfma.io.in.valid=[%d]    hfma.io.rs1=[%x]    hfma.io.rs2=[%x]    hfma.io.rs3=[%x]\n",
+              hfma.io.in.valid.asUInt, hfma.io.in.bits.in1,hfma.io.in.bits.in2,hfma.io.in.bits.in3);
       printf("hfma.io.out=[%x]    hfma.io.out.valid=[%d]\n",hfma.io.out.bits.data,hfma.io.out.valid.asUInt);
       printf("resp.data=[%x]    resp.valid=[%d]\n",io.resp.bits.data,io.resp.valid.asUInt);
-      printf("hfpiu_out.valid=[%d]    hfpu.io.out.valid=[%d]    hfma.io.out.valid=[%d]\n",hfpiu_out.valid.asUInt,hfpmu.io.out.valid.asUInt,hfma.io.out.valid.asUInt)
+      printf("hfpiu_out.valid=[%d]    hfpmu.io.out.valid=[%d]    hfma.io.out.valid=[%d]\n",hfpiu_out.valid.asUInt,hfpmu.io.out.valid.asUInt,hfma.io.out.valid.asUInt)
       printf("HFPU-End--------------------------------------------------------------------------------------------\n")
    }
 
