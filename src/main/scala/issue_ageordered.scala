@@ -121,6 +121,9 @@ class IssueUnitCollasping(
       port_issued(w) = Bool(false)
    }
 
+   if(DEBUG_PRINTF_HFPU_ISSUE){
+      printf("Issue_ageordered--------------------------------------\n")
+   } 
    for (i <- 0 until num_issue_slots)
    {
       issue_slots(i).grant := Bool(false)
@@ -129,13 +132,6 @@ class IssueUnitCollasping(
       for (w <- 0 until issue_width)
       {
          val can_allocate = (issue_slots(i).uop.fu_code & io.fu_types(w)) =/= UInt(0)
-         if(DEBUG_PRINTF_HFPU_ISSUE){
-            printf("Issue_ageordered--------------------------------------\n")
-            printf("fu_code=[%x]    fu_types[%x]    can_allocate=[%d]\n",
-                    issue_slots(i).uop.fu_code, io.fu_types(w), can_allocate.asUInt)
-            printf("Issue_ageordered--------------------------------------\n")
-         }
-
          when (requests(i) && !uop_issued && can_allocate && !port_issued(w))
          {
             issue_slots(i).grant := Bool(true)
@@ -145,8 +141,21 @@ class IssueUnitCollasping(
          val was_port_issued_yet = port_issued(w)
          port_issued(w) = (requests(i) && !uop_issued && can_allocate) | port_issued(w)
          uop_issued = (requests(i) && can_allocate && !was_port_issued_yet) | uop_issued
+
+         if(DEBUG_PRINTF_HFPU_ISSUE){
+            printf("    io.iss_valid(%d)=[%d]    io.iss_uops(%d).uopc=[%d]\n",UInt(w),io.iss_valids(w).asUInt,UInt(w),io.iss_uops(w).uopc)
+            printf("      requests(%d)=[%d]    !uop_issued=[%d]    can_allocate=[%d]    port_issued(%d)=[%d]\n",
+                          UInt(i),requests(i).asUInt, (!uop_issued).asUInt, can_allocate.asUInt, UInt(w), port_issued(w).asUInt) 
+            printf("        fu_code=[%x]    fu_types[%x]    can_allocate=[%d]\n",
+                            issue_slots(i).uop.fu_code, io.fu_types(w), can_allocate.asUInt)
+         }
+
+
       }
    }
+   if(DEBUG_PRINTF_HFPU_ISSUE){
+      printf("Issue_ageordered--------------------------------------\n")
+   } 
 
 }
 

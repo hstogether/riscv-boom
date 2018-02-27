@@ -36,7 +36,7 @@ trait BOOMDebugConstants
    val DEBUG_PRINTF_HFPU   = true && DEBUG_PRINTF
    val DEBUG_PRINTF_HFPU_PATH = true && DEBUG_PRINTF
    val DEBUG_PRINTF_REGREAD = true && DEBUG_PRINTF
-   val DEBUG_PRINTF_HFPU_ISSUE = false && DEBUG_PRINTF
+   val DEBUG_PRINTF_HFPU_ISSUE = true && DEBUG_PRINTF
 
    // BPD asserts can be too heavy-handed for something that we're okay giving incorrect answers.
    val ENABLE_BPD_ASSERTS  = false

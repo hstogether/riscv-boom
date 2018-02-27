@@ -547,7 +547,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    for ((renport, hfpport) <- rename_stage.io.hfp_wakeups zip hfp_pipeline.io.wakeups)
    {
       renport <> hfpport
-      renport.valid := Bool(false)
+      //renport.valid := Bool(false)
    }
 
    rename_stage.io.com_valids := rob.io.commit.valids
@@ -1279,7 +1279,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
       println("Whitespace padded: " + whitespace)
 
-      printf("\n\n\n\n")
+      //printf("\n\n\n\n")
+      printf("\n")
       printf("--- Cyc=%d , ----------------- Ret: %d ----------------------------------"
          , debug_tsc_reg
          , debug_irt_reg & UInt(0xffffff))
@@ -1483,6 +1484,14 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
          }
       }
    }
+   if(DEBUG_PRINTF_HFPU){
+   printf("--- Cyc=%d+1 , ----------------- Ret: %d+1 ----------------------------------"
+      , debug_tsc_reg
+      , debug_irt_reg & UInt(0xffffff))
+   printf("\n\n\n\n")
+   }
+
+
 
    //-------------------------------------------------------------
    //-------------------------------------------------------------

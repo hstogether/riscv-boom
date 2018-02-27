@@ -187,7 +187,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       if(DEBUG_PRINTF_HFPU){
          printf("HfpPipeline--Issue Stage---------------------------------------------\n")
          printf("    Iss_uops\n")
-         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    dis.valid=[%d]\n",
+         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    iss_valid=[%d]\n",
                  iss_uops(i).uopc,iss_uops(i).inst,
                  iss_uops(i).hfp_val.asUInt,iss_uops(i).fu_code,
                  iss_uops(i).iqtype,iss_uops(i).valid.asUInt,iss_valids(i).asUInt)
@@ -198,7 +198,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
                  iss_uops(i).dst_rtype, iss_uops(i).ldst,iss_uops(i).pdst,iss_uops(i).ldst_val.asUInt)
 
          printf("    Iss_unit\n")
-         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    dis.valid=[%d]\n",
+         printf("uop.uopc=[%d]    uop.inst=[%x]    uop.hfp_val=[%d]   uop.fu_code=[%d]    uop.iqtype=[%d]    uop.valid=[%d]    iss_valid=[%d]\n",
                  issue_unit.io.iss_uops(i).uopc,issue_unit.io.iss_uops(i).inst,
                  issue_unit.io.iss_uops(i).hfp_val.asUInt,issue_unit.io.iss_uops(i).fu_code,
                  issue_unit.io.iss_uops(i).iqtype,issue_unit.io.iss_uops(i).valid.asUInt,issue_unit.io.iss_valids(i).asUInt)
@@ -212,10 +212,20 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    }
 
    // Wakeup
+   if(DEBUG_PRINTF_HFPU){
+      printf("HfpPipeline--Wakeup(issue_unit.io.wakeup_pdsts:=io.wakeups)-------------------------------\n")
+   }
    for ((writeback, issue_wakeup) <- io.wakeups zip issue_unit.io.wakeup_pdsts)
    {
       issue_wakeup.valid := writeback.valid
       issue_wakeup.bits  := writeback.bits.uop.pdst
+      if(DEBUG_PRINTF_HFPU){
+         printf("issue_wakeup.valid=[%d]    issue_wakeup.bits=[%d]\n",
+                 issue_wakeup.valid.asUInt, issue_wakeup.bits)
+      }
+   }
+   if(DEBUG_PRINTF_HFPU){
+      printf("HfpPipeline--Wakeup(issue_unit.io.wakeup_pdsts:=io.wakeups)-------------------------------\n")
    }
 
    //-------------------------------------------------------------
@@ -400,9 +410,9 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    }
    ll_wbarb.io.in(1) <> ihfpu_resp
    ll_wbarb.io.in(2) <> fphfpu_resp
-   ll_wbarb.io.in(1).valid := ihfpu_resp.valid && ihfpu_resp.bits.uop.dst_rtype === RT_FLT
+   ll_wbarb.io.in(1).valid := ihfpu_resp.valid && ihfpu_resp.bits.uop.dst_rtype === RT_FHT
    ll_wbarb.io.in(1).bits  := ihfpu_resp.bits
-   ll_wbarb.io.in(2).valid := fphfpu_resp.valid && fphfpu_resp.bits.uop.dst_rtype === RT_FLT
+   ll_wbarb.io.in(2).valid := fphfpu_resp.valid && fphfpu_resp.bits.uop.dst_rtype === RT_FHT
    ll_wbarb.io.in(2).bits  := fphfpu_resp.bits
    if (regreadLatency > 0) {
       // Cut up critical path by delaying the write by a cycle.
