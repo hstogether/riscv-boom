@@ -430,19 +430,27 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
          val tofp  = wbresp.bits.uop.dst_rtype === RT_FLT
 
          if (wbresp.bits.writesToIRF || wbresp.bits.writesToFRF) {
-            if(toint == true){
+            //if(toint == true){
                io.toint <> wbresp
-               assert(!(wbresp.valid && !toint))
+               assert(!(wbresp.valid && !toint && !tofp))
                assert(!toint_found) // only support one toint connector
                toint_found = true
-            } else {
+            //} else {
                io.tofp <> wbresp
-               assert(!(wbresp.valid && !tofp))
+               assert(!(wbresp.valid && !tofp && !toint))
                assert(!tofp_found)
                tofp_found=true
-            }
+            //}
             io.toint.valid := wbresp.valid && toint
             io.tofp.valid  := wbresp.valid && tofp
+            if(DEBUG_PRINTF_HFPU){
+               printf("HfpPipeline--Writeback Stage--io.toint/io.tofp------------------------------------------------------------------------------------------\n")
+               printf("     io.toint.valid=[%d]    io.toint.bits.uop.uopc=[%d]    io.toint.bits.uop.dst_rtype=[%d]\n",
+                            io.toint.valid.asUInt, io.toint.bits.uop.uopc,        io.toint.bits.uop.dst_rtype)
+               printf("     io.tofp.valid=[%d]    io.tofp.bits.uop.uopc=[%d]     io.tofp.bits.uop.dst_rtype=[%d]\n",
+                            io.tofp.valid.asUInt, io.tofp.bits.uop.uopc,         io.tofp.bits.uop.dst_rtype)
+               printf("HfpPipeline--Writeback Stage--io.toint/io.tofp------------------------------------------------------------------------------------------\n")
+            }
          } else if (eu.has_ihfpu || eu.has_fphfpu) {
             // share with ll unit
          } else {
@@ -455,13 +463,13 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
             wbresp.ready := fregfile.io.write_ports(w_cnt).ready
             if(DEBUG_PRINTF_HFPU){
                printf("HfpPipeline--Writeback Stage--write to hfp reg------------------------------------------------------------------------------------------\n")
-               printf("    wbresp\n")
-               printf("    wbresp.valid=[%d]    wbresp.bits.uop.ctrl.rf_wen=[%d]    wbresp.bits.uop.pdst=[%x]    wbresp.bits.data=[%x]    wbresp.ready=[%d]\n",
-                       wbresp.valid.asUInt, wbresp.bits.uop.ctrl.rf_wen,        wbresp.bits.uop.pdst,        wbresp.bits.data,        wbresp.ready.asUInt);
+               printf("     wbresp\n")
+               printf("     wbresp.valid=[%d]    wbresp.bits.uop.ctrl.rf_wen=[%d]    wbresp.bits.uop.pdst=[%x]    wbresp.bits.data=[%x]    wbresp.ready=[%d]\n",
+                            wbresp.valid.asUInt, wbresp.bits.uop.ctrl.rf_wen,        wbresp.bits.uop.pdst,        wbresp.bits.data,        wbresp.ready.asUInt);
                printf("     wbresp.bits.uop.uopc=[%d]    wbresp.bits.uop.fu_code=[%d]\n",wbresp.bits.uop.uopc,wbresp.bits.uop.fu_code)
                printf("     fregfile.io.write_ports(%d)\n",UInt(w_cnt))
                printf("     fregfile.io.write_ports.valid=[%d]    fregfile.io.write_ports.bits.addr=[%x]    fregfile.io.write_ports.bits.data=[%x]    fregfile.io.write_ports.ready=[%d]\n",
-                       fregfile.io.write_ports(w_cnt).valid.asUInt,fregfile.io.write_ports(w_cnt).bits.addr,fregfile.io.write_ports(w_cnt).bits.data,fregfile.io.write_ports(w_cnt).ready.asUInt);
+                            fregfile.io.write_ports(w_cnt).valid.asUInt,fregfile.io.write_ports(w_cnt).bits.addr,fregfile.io.write_ports(w_cnt).bits.data,fregfile.io.write_ports(w_cnt).ready.asUInt);
                printf("HfpPipeline--Writeback stage--write to hfp reg--------------------------------------------------------------------------------------------\n")
             }
          }
@@ -469,7 +477,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
         if(DEBUG_PRINTF_HFPU){
             printf("HfpPipeline--Writeback Stage--assert---\n")
             printf("     wbresp.valid=[%d]    wbresp.bits.uop.ctrl.rf_wen=[%d]    wbresp.bits.uop.dst_rtype=[%d]    wbresp.bits.uop.valid=[%d]\n",
-                    wbresp.valid.asUInt, wbresp.bits.uop.ctrl.rf_wen.asUInt, wbresp.bits.uop.dst_rtype,wbresp.bits.uop.valid.asUInt)
+                         wbresp.valid.asUInt, wbresp.bits.uop.ctrl.rf_wen.asUInt, wbresp.bits.uop.dst_rtype,wbresp.bits.uop.valid.asUInt)
             printf("     wbresp.bits.uop.uopc=[%d]    wbresp.bits.uop.fu_code=[%d]\n",wbresp.bits.uop.uopc,wbresp.bits.uop.fu_code)
             printf("     Function unit is =[%d]\n",
                    Mux(Bool(wbresp.bits.writesToIRF) && toint, Bits(0),
@@ -477,8 +485,14 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
                            Mux(Bool(eu.has_ihfpu), Bits(2),
                                Mux(Bool(eu.has_fphfpu), Bits(3),
                                    Bits(4))))))
+            printf("     io.toint.valid=[%d]    io.toint.bits.uop.uopc=[%d]    io.toint.bits.uop.dst_rtype=[%d]\n",
+                         io.toint.valid.asUInt, io.toint.bits.uop.uopc,        io.toint.bits.uop.dst_rtype)
+            printf("     io.tofp.valid=[%d]    io.tofp.bits.uop.uopc=[%d]     io.tofp.bits.uop.dst_rtype=[%d]\n",
+                         io.tofp.valid.asUInt, io.tofp.bits.uop.uopc,         io.tofp.bits.uop.dst_rtype)
             printf("HfpPipeline--Writeback Stage--assert---\n")
          }
+         //assert (!(io.toint.valid && io.toint.bits.uop.dst_rtype =/= RT_FIX),
+         //        "[hfppipeline] toint error!")
          assert (!(wbresp.valid &&
             !wbresp.bits.uop.ctrl.rf_wen &&
             wbresp.bits.uop.dst_rtype === RT_FHT),

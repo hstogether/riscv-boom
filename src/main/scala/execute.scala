@@ -519,8 +519,8 @@ class HFPUExeUnit(
 
    io.resp(0).bits.writesToIRF = false
    io.resp(0).bits.writesToFRF = false
-   io.resp(1).bits.writesToIRF = true
-   io.resp(1).bits.writesToFRF = true
+   //io.resp(1).bits.writesToIRF = true
+   //io.resp(1).bits.writesToFRF = true
 
    // HFPU Unit -----------------------
    var hfpu: HFPUUnit = null
@@ -555,7 +555,7 @@ class HFPUExeUnit(
                  io.req.bits.rs1_data,io.req.bits.rs2_data,io.req.bits.rs3_data);
          printf("hfpu.io.req.valid=[%d]    hfpu.io.req.rs1=[%x]    hfpu.io.req.rs2=[%x]    hfpu.io.req.rs3=[%x]\n",
                  hfpu.io.req.valid.asUInt,hfpu.io.req.bits.rs1_data,hfpu.io.req.bits.rs2_data,hfpu.io.req.bits.rs3_data);
-         printf("hfpu.io.resp.valid=[%d]\n",hfpu.io.resp.valid.asUInt)
+         printf("hfpu.io.resp.valid=[%d]    hfpu.io.resp.bits.data=[%x]\n",hfpu.io.resp.valid.asUInt,hfpu.io.resp.bits.data)
          printf("HFPUExeUnit-End--------------------------------------------------------------------------------------------\n")
       }
 
@@ -610,23 +610,41 @@ class HFPUExeUnit(
               hfpu_resp_val.asUInt, hfdiv_resp_val.asUInt, fu_units.map(_.io.resp.valid).reduce(_|_).asUInt)
       printf("io.resp[0].uop.uopc=[%d]    io.resp[0].uop.dst_rtype=[%d]    io.resp[0].data=[%x]    io.resp[0].valid=[%d]\n",
               io.resp(0).bits.uop.uopc,   io.resp(0).bits.uop.dst_rtype,   io.resp(0).bits.data,   io.resp(0).valid.asUInt);
-      printf("HFPUExeUnit-End--------------------------------------------------------------------------------------------\n")
+      //printf("HFPUExeUnit-End--------------------------------------------------------------------------------------------\n")
    }
  
 
    // Outputs (Write Port #1) -- FpToInt Queuing Unit -----------------------
-   if(io.req.bits.uop.fu_code_is(FU_HF2I)==true){
-      io.resp(1).bits.writesToFRF = false
-   } else {
-      io.resp(1).bits.writesToIRF = false
-   }
+   //if(io.req.bits.uop.fu_code_is(FU_HF2I)==true){
+   //   io.resp(1).bits.writesToFRF = false
+   //} else if(io.req.bits.uop.fu_code_is(FU_HF2F)==true){
+   //   io.resp(1).bits.writesToIRF = false
+   //}else{
+   //   io.resp(1).bits.writesToIRF = false
+   //   io.resp(1).bits.writesToFRF = false
+   //}
 
+   //io.resp(1).bits.writesToIRF = io.req.bits.uop.fu_code_is(FU_HF2I)==true // Why error???
+   //io.resp(1).bits.writesToFRF = io.req.bits.uop.fu_code_is(FU_HF2F)==true
+   //io.resp(1).bits.writesToIRF = if(io.req.bits.uop.fu_code_is(FU_HF2I)==true) true else false
+   //io.resp(1).bits.writesToFRF = if(io.req.bits.uop.fu_code_is(FU_HF2F)==true) true else false
+
+   if(DEBUG_PRINTF_HFPU){
+      printf("io.resp[0].bits.writesToFRF=[%d]    io.resp[0].bits.writesToIRF=[%d]    io.resp[1].bits.writesToFRF=[%d]    io.resp[1].bits.writesToIRF=[%d]\n",
+              if(io.resp(0).bits.writesToFRF) UInt(1) else UInt(0),
+              if(io.resp(0).bits.writesToIRF) UInt(1) else UInt(0),
+              if(io.resp(1).bits.writesToFRF) UInt(1) else UInt(0),
+              if(io.resp(1).bits.writesToIRF) UInt(1) else UInt(0))
+      //printf("io.req.bits.uop.fu_code=[%d]    io.req.bits.uop.fu_code_is(FU_HF2I)=[%d]\n",
+       //       io.req.bits.uop.fu_code,        io.req.bits.uop.fu_code_is(FU_HF2I))
+   }
+ 
    // TODO instantiate our own fpiu; and remove it from hfpu.scala.
 
    // buffer up results since we share write-port on integer regfile. and HFP regfile
    val queue = Module(new QueueForMicroOpWithData(entries = dfmaLatency + 3, data_width)) // TODO being overly conservative
    queue.io.enq.valid       := hfpu.io.resp.valid && (hfpu.io.resp.bits.uop.fu_code_is(FU_HF2I) ||
-                                                     hfpu.io.resp.bits.uop.fu_code_is(FU_HF2F))
+                                                      hfpu.io.resp.bits.uop.fu_code_is(FU_HF2F))
    queue.io.enq.bits.uop    := hfpu.io.resp.bits.uop
    queue.io.enq.bits.data   := hfpu.io.resp.bits.data
    queue.io.enq.bits.fflags := hfpu.io.resp.bits.fflags
@@ -636,6 +654,13 @@ class HFPUExeUnit(
    //io.resp(1).bits.writesToIRF = queue.io.deq.bits.uop.fu_code == FU_HF2I
    //io.resp(1).bits.writesToFRF = queue.io.deq.bits.uop.fu_code == FU_HF2F
 
+   if(DEBUG_PRINTF_HFPU){
+      //printf("HFPUExeUnit-Start--------------------------------------------------------------------------------------------\n")
+      printf("io.resp[1].uop.uopc=[%d]    io.resp[1].uop.dst_rtype=[%d]    io.resp[1].data=[%x]    io.resp[1].valid=[%d]\n",
+              io.resp(1).bits.uop.uopc,   io.resp(1).bits.uop.dst_rtype,   io.resp(1).bits.data,   io.resp(1).valid.asUInt);
+      printf("HFPUExeUnit-End--------------------------------------------------------------------------------------------\n")
+   }
+ 
    hfpiu_busy := !(queue.io.empty)
    hfpfpu_busy := !(queue.io.empty)
 

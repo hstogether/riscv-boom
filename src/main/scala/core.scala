@@ -501,15 +501,36 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
       require (exe_units(i).usesIRF)
    }
    require (wu_idx == num_wakeup_ports)
+
+   if(DEBUG_PRINTF_HFPU)
+      printf("Core-int_wakeups-assert--------------------------------\n")
    for( i <- 0 until int_wakeups.length)
    {
+      if(DEBUG_PRINTF_HFPU){
+         printf("int_wakeups.valid=[%d]    int_wakeups.bits.uop.dst_rtype=[%d]    int_wakeups.bits.uop.uopc=[%d]\n",
+                 int_wakeups(i).valid.asUInt,  int_wakeups(i).bits.uop.dst_rtype, int_wakeups(i).bits.uop.uopc)
+      }
       assert( !(int_wakeups(i).valid) || (int_wakeups(i).valid && int_wakeups(i).bits.uop.dst_rtype === RT_FIX))
    }
+   if(DEBUG_PRINTF_HFPU)
+      printf("Core-int_wakeups-assert--------------------------------\n")
 
+
+   if(DEBUG_PRINTF_HFPU)
+      printf("Core-rename-int_wakeups-assert--------------------------------\n")
    for ((renport, intport) <- rename_stage.io.int_wakeups zip int_wakeups)
    {
+      if(DEBUG_PRINTF_HFPU){
+         printf("intport.valid=[%d]    intport.bits.uop.dst_rtype=[%d]    intport.bits.uop.uopc=[%d]\n",
+                 intport.valid.asUInt,  intport.bits.uop.dst_rtype, intport.bits.uop.uopc)
+         printf("renport.valid=[%d]    renport.bits.uop.dst_rtype=[%d]    renport.bits.uop.uopc=[%d]\n\n",
+                 renport.valid.asUInt, renport.bits.uop.dst_rtype,        renport.bits.uop.uopc)
+      }
       renport <> intport
    }
+   if(DEBUG_PRINTF_HFPU)
+      printf("Core-rename-int_wakeups-assert--------------------------------\n")
+
    for( i <- 0 until fp_pipeline.io.wakeups.length)
    {
       assert( !(fp_pipeline.io.wakeups(i).valid) || (fp_pipeline.io.wakeups(i).valid && fp_pipeline.io.wakeups(i).bits.uop.dst_rtype === RT_FLT))
