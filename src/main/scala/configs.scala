@@ -27,7 +27,7 @@ class DefaultBoomConfig extends Config((site, here, up) => {
          nPerfEvents = 38,
          perfIncWidth = 3, // driven by issue ports, as set in BoomCoreParams.issueParams
          fpu = Some(tile.FPUParams(sfmaLatency=4, dfmaLatency=4, divSqrt=true)),
-         hfpu = Some(tile.FPUParams(hfmaLatency=4, divSqrt=false))),
+         hfpu = Some(tile.FPUParams(hfmaLatency=4, divSqrt=true))),
       btb = Some(BTBParams(nEntries = 0, updatesOutOfOrder = true)),
       dcache = Some(DCacheParams(rowBits = site(L1toL2Config).beatBytes*8, nSets=64, nWays=8, nMSHRs=4, nTLBEntries=8)),
       icache = Some(ICacheParams(rowBits = site(L1toL2Config).beatBytes*8, nSets=64, nWays=8))

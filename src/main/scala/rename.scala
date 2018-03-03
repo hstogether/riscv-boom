@@ -383,9 +383,10 @@ class RenameStage(
       // Push back against Decode stage if Rename1 can't proceed (and Rename2/Dispatch can't receive).
       io.inst_can_proceed(w) :=
          ren2_will_proceed &&
-         ((ren1_uops(w).dst_rtype =/= RT_FIX && ren1_uops(w).dst_rtype =/= RT_FLT) ||
+         ((ren1_uops(w).dst_rtype =/= RT_FIX && ren1_uops(w).dst_rtype =/= RT_FLT && ren1_uops(w).dst_rtype =/= RT_FHT) ||
          (ifreelist.io.can_allocate(w) && ren1_uops(w).dst_rtype === RT_FIX) ||
-         (ffreelist.io.can_allocate(w) && ren1_uops(w).dst_rtype === RT_FLT))
+         (ffreelist.io.can_allocate(w) && ren1_uops(w).dst_rtype === RT_FLT) ||
+         (hffreelist.io.can_allocate(w) && ren1_uops(w).dst_rtype === RT_FHT))
    }
 
 

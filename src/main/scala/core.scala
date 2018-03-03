@@ -547,7 +547,6 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    for ((renport, hfpport) <- rename_stage.io.hfp_wakeups zip hfp_pipeline.io.wakeups)
    {
       renport <> hfpport
-      //renport.valid := Bool(false)
    }
 
    rename_stage.io.com_valids := rob.io.commit.valids

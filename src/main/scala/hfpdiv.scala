@@ -91,16 +91,6 @@ class HFDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined 
    // handle incoming uop, including upconversion as needed, and push back if our input queue is already occupied
    io.req.ready := !r_buffer_val
 
-   def upconvert(x: UInt) =
-   {
-      val s2d = Module(new hardfloat.RecFNToRecFN(inExpWidth = 8, inSigWidth = 24, outExpWidth = 11, outSigWidth = 53))
-      s2d.io.in := x
-      s2d.io.roundingMode := UInt(0)
-      s2d.io.out
-   }
-   val in1_upconvert = upconvert(io.req.bits.rs1_data)
-   val in2_upconvert = upconvert(io.req.bits.rs2_data)
-
    when (io.req.valid && !IsKilledByBranch(io.brinfo, io.req.bits.uop) && !io.req.bits.kill)
    {
       r_buffer_val := Bool(true)
@@ -111,11 +101,6 @@ class HFDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined 
       r_buffer_fin.typ := UInt(0) // unused for fdivsqrt
       r_buffer_fin.in1 := io.req.bits.rs1_data
       r_buffer_fin.in2 := io.req.bits.rs2_data
-      when (fdiv_decoder.io.sigs.single)
-      {
-         r_buffer_fin.in1 := in1_upconvert
-         r_buffer_fin.in2 := in2_upconvert
-      }
    }
 
    assert (!(r_buffer_val && io.req.valid), "[fdiv] a request is incoming while the buffer is already full.")
@@ -123,7 +108,7 @@ class HFDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined 
    //-----------
    // fdiv/fsqrt
 
-   val divsqrt = Module(new hardfloat.DivSqrtRecF64)
+   val divsqrt = Module(new hardfloat.DivSqrtRecFN_small(5,11,0))
 
    val r_divsqrt_val = Reg(init = Bool(false))  // inflight uop?
    val r_divsqrt_killed = Reg(Bool())           // has inflight uop been killed?
@@ -139,7 +124,7 @@ class HFDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined 
       !r_divsqrt_val &&
       output_buffer_available
 
-   val divsqrt_ready = Mux(divsqrt.io.sqrtOp, divsqrt.io.inReady_sqrt, divsqrt.io.inReady_div)
+   val divsqrt_ready = divsqrt.io.inReady
    divsqrt.io.inValid := may_fire_input // must be setup early
    divsqrt.io.sqrtOp := r_buffer_fin.sqrt
    divsqrt.io.a := r_buffer_fin.in1
@@ -184,7 +169,7 @@ class HFDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined 
       r_out_val := !r_divsqrt_killed && !IsKilledByBranch(io.brinfo, r_divsqrt_uop) && !io.req.bits.kill
       r_out_uop := r_divsqrt_uop
       r_out_uop.br_mask := GetNewBrMask(io.brinfo, r_divsqrt_uop)
-      r_out_wdata_double := divsqrt.io.out
+      r_out_wdata_double := Cat(Fill(48,UInt(1,1)),divsqrt.io.out)
       r_out_flags_double := divsqrt.io.exceptionFlags
 
       assert (r_divsqrt_val, "[fdiv] a response is being generated for no request.")
@@ -193,18 +178,31 @@ class HFDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined 
    assert (!(r_out_val && (divsqrt.io.outValid_div || divsqrt.io.outValid_sqrt)),
       "[fdiv] Buffered output being overwritten by another output from the fdiv/fsqrt unit.")
 
-   val downvert_d2s = Module(new hardfloat.RecFNToRecFN(
-      inExpWidth = 11, inSigWidth = 53, outExpWidth = 8, outSigWidth = 24))
-   downvert_d2s.io.in := r_out_wdata_double
-   downvert_d2s.io.roundingMode := r_divsqrt_fin.rm
-   val out_flags = r_out_flags_double | Mux(r_divsqrt_fin.single, downvert_d2s.io.exceptionFlags, Bits(0))
-
    io.resp.valid := r_out_val && !IsKilledByBranch(io.brinfo, r_out_uop)
    io.resp.bits.uop := r_out_uop
-   io.resp.bits.data := Mux(r_divsqrt_fin.single, downvert_d2s.io.out, r_out_wdata_double)
+   io.resp.bits.data := r_out_wdata_double
    io.resp.bits.fflags.valid := io.resp.valid
    io.resp.bits.fflags.bits.uop := r_out_uop
    io.resp.bits.fflags.bits.uop.br_mask := GetNewBrMask(io.brinfo, r_out_uop)
-   io.resp.bits.fflags.bits.flags := out_flags
+   io.resp.bits.fflags.bits.flags := r_out_flags_double
+
+   if(DEBUG_PRINTF_HFDIV){
+      printf("HFPDIV-Start----------------------------------------------------------------------------------\n")
+      printf("  In:\n")
+      printf("    io.req.bits.uop.valid=[%d]    io.req.bits.uop.uopc=[%d]    fdiv_decoder.io.sigs.cmd=[%d]    io.req.bits.rs1_data=[%x]    io.req.bits.rs2_data=[%x]\n",
+                  io.req.bits.uop.valid.asUInt, io.req.bits.uop.uopc,        fdiv_decoder.io.sigs.cmd,        io.req.bits.rs1_data,        io.req.bits.rs2_data);
+      printf("    r_buffer_val=[%d]    r_buffer_req.uop.uopc=[%d]    r_buffer_fin.in1=[%x]    r_buffer_fin.in2=[%x]\n",
+                  r_buffer_val.asUInt, r_buffer_req.uop.uopc,        r_buffer_fin.in1,        r_buffer_fin.in2)
+      printf("    divsqrt.io.inValid=[%d]    divsqrt.io.sqrtOp=[%d]    divsqrt.io.a=[%x]    divsqrt.io.b=[%x]\n",
+                  divsqrt.io.inValid.asUInt, divsqrt.io.sqrtOp.asUInt, divsqrt.io.a,        divsqrt.io.b)
+      printf("  Out:\n")
+      printf("    divsqrt.io.outValid_div=[%d]    divsqrt.io.outValid_sqrt=[%d]    divsqrt.io.out=[%x]\n",
+                  divsqrt.io.outValid_div.asUInt, divsqrt.io.outValid_sqrt.asUInt, divsqrt.io.out)
+      printf("    r_out_val=[%d]    r_out_uop.uopc=[%d]    r_out_wdata_double=[%x]\n",
+                  r_out_val.asUInt, r_out_uop.uopc,        r_out_wdata_double)
+      printf("    io.resp.valid=[%d]    io.resp.bits.uop.uopc=[%d]    io.resp.bits.data=[%x]\n",
+                  io.resp.valid.asUInt, io.resp.bits.uop.uopc,        io.resp.bits.data)
+      printf("HFPDIV-End------------------------------------------------------------------------------------\n")
+   }
 }
 

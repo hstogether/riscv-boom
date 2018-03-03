@@ -176,10 +176,10 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       iss_uops(i) := issue_unit.io.iss_uops(i)
 
       var fu_types = exe_units(i).io.fu_types
-      if (exe_units(i).supportedFuncUnits.fdiv && regreadLatency > 0)
+      if (exe_units(i).supportedFuncUnits.hfdiv && regreadLatency > 0)
       {
-         val fdiv_issued = iss_valids(i) && iss_uops(i).fu_code_is(FU_HFDV)
-         fu_types = fu_types & RegNext(~Mux(fdiv_issued, FU_HFDV, Bits(0)))
+         val hfdiv_issued = iss_valids(i) && iss_uops(i).fu_code_is(FU_HFDV)
+         fu_types = fu_types & RegNext(~Mux(hfdiv_issued, FU_HFDV, Bits(0)))
       }
       issue_unit.io.fu_types(i) := fu_types
 

@@ -150,7 +150,7 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
       require (hfp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.
       for (w <- 0 until hfp_width) {
          exe_units += Module(new HFPUExeUnit(has_hfpu = true,
-                                             has_hfdiv = false,  //usingFDivSqrt && (w==0), TODO: enable me -- Jecy
+                                             has_hfdiv = usingHFDivSqrt && (w==0),
                                              has_hfpiu = (w==0),
                                              has_hfpfpu = (w==0)))
       }

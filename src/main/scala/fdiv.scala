@@ -124,6 +124,7 @@ class FDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined =
    // fdiv/fsqrt
 
    val divsqrt = Module(new hardfloat.DivSqrtRecF64)
+   //val divsqrt = Module(new hardfloat.DivSqrtRecFN_small(11,53,0))
 
    val r_divsqrt_val = Reg(init = Bool(false))  // inflight uop?
    val r_divsqrt_killed = Reg(Bool())           // has inflight uop been killed?
@@ -140,6 +141,7 @@ class FDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined =
       output_buffer_available
 
    val divsqrt_ready = Mux(divsqrt.io.sqrtOp, divsqrt.io.inReady_sqrt, divsqrt.io.inReady_div)
+   //val divsqrt_ready = divsqrt.io.inReady
    divsqrt.io.inValid := may_fire_input // must be setup early
    divsqrt.io.sqrtOp := r_buffer_fin.sqrt
    divsqrt.io.a := r_buffer_fin.in1

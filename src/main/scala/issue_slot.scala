@@ -196,11 +196,9 @@ class IssueSlot(num_slow_wakeup_ports: Int)(implicit p: Parameters) extends Boom
    //-------------------------------------------------------------
    // Request Logic
    io.request := isValid && slot_p1 && slot_p2 && slot_p3 && !io.kill
-   if(DEBUG_PRINTF_HFPU){
-      printf("Issue_slot--------------------------------------\n")
-      printf("io.request=[%d]    isValid=[%d]    slot_p1=[%d]    slot_p2=[%d]    slot_p3=[%d]    !io.kill=[%d]\n",
+   if(DEBUG_PRINTF_HFPU_ISSUE){
+      printf("Issue_slot: io.request=[%d]    isValid=[%d]    slot_p1=[%d]    slot_p2=[%d]    slot_p3=[%d]    !io.kill=[%d]\n",
               io.request.asUInt, isValid.asUInt, slot_p1.asUInt, slot_p2.asUInt, slot_p3.asUInt, (!io.kill).asUInt)
-      printf("Issue_slot--------------------------------------\n")
    }
    val high_priority = slotUop.is_br_or_jmp
 //   io.request_hp := io.request && high_priority
