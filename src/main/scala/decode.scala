@@ -382,9 +382,9 @@ object HFDecode extends DecodeConstants
    FCVT_L_H-> List(Y, N, N, Y, uopFCVT_L_H ,IQT_HFP, FU_HF2I, RT_FIX, RT_FHT, RT_X  , RT_X  , N, IS_I, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
    FCVT_LU_H->List(Y, N, N, Y, uopFCVT_LU_H,IQT_HFP, FU_HF2I, RT_FIX, RT_FHT, RT_X  , RT_X  , N, IS_I, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
 
-   FEQ_H    ->List(Y, N, N, Y, uopFEQ_H   , IQT_HFP, FU_HFPU, RT_FIX, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
-   FLT_H    ->List(Y, N, N, Y, uopFLT_H   , IQT_HFP, FU_HFPU, RT_FIX, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
-   FLE_H    ->List(Y, N, N, Y, uopFLE_H   , IQT_HFP, FU_HFPU, RT_FIX, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   FEQ_H    ->List(Y, N, N, Y, uopFEQ_H   , IQT_HFP, FU_HF2I, RT_FIX, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   FLT_H    ->List(Y, N, N, Y, uopFLT_H   , IQT_HFP, FU_HF2I, RT_FIX, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   FLE_H    ->List(Y, N, N, Y, uopFLE_H   , IQT_HFP, FU_HF2I, RT_FIX, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
 
    FMIN_H   ->List(Y, N, N, Y, uopFMIN_H  , IQT_HFP, FU_HFPU, RT_FHT, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
    FMAX_H   ->List(Y, N, N, Y, uopFMAX_H  , IQT_HFP, FU_HFPU, RT_FHT, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
