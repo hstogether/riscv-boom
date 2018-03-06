@@ -772,7 +772,7 @@ class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    assert (!(io.req.valid && !hfp_ctrl.fromint),
       "[func] Only support fromInt micro-ops.")
 
-   val ihfpu = Module(new tile.IntToFP(intToFpLatency)) // TODO: Using intToHfpLatency -- Jecy
+   val ihfpu = Module(new tile.IntToHFP(intToFpLatency)) // TODO: Using intToHfpLatency -- Jecy
    ihfpu.io.in.valid := io.req.valid
    ihfpu.io.in.bits := req
 

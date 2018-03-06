@@ -353,7 +353,7 @@ object HFDecode extends DecodeConstants
    FLH     -> List(Y, N, N, Y, uopLD     , IQT_MEM,  FU_MEM,  RT_FHT, RT_FIX, RT_X  , RT_X  , N, IS_I, Y, N, N, N, N, M_XRD, MSK_H , UInt(0), N, N, N, N, N, N, CSR.N),
    FSH     -> List(Y, N, N, Y, uopSTA    , IQT_MEM,  FU_MEM,  RT_X  , RT_FIX, RT_FHT, RT_X  , N, IS_S, N, Y, N, N, N, M_XWR, MSK_H , UInt(0), N, N, N, N, N, N, CSR.N),
 
-   FCLASS_H-> List(Y, N, N, Y, uopFCLASS_H,IQT_HFP,  FU_HFPU, RT_FIX, RT_FHT, RT_X  , RT_X  , N, IS_I, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   FCLASS_H-> List(Y, N, N, Y, uopFCLASS_H,IQT_HFP,  FU_HF2I, RT_FIX, RT_FHT, RT_X  , RT_X  , N, IS_I, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
 
    FMV_H_X -> List(Y, N, N, Y, uopFMV_H_X, IQT_INT,  FU_I2HF, RT_FHT, RT_FIX, RT_X  , RT_X  , N, IS_I, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
    FMV_X_H -> List(Y, N, N, Y, uopFMV_X_H, IQT_HFP,  FU_HF2I, RT_FIX, RT_FHT, RT_X  , RT_X  , N, IS_I, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
