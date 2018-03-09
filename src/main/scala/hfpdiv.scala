@@ -169,7 +169,7 @@ class HFDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined 
       r_out_val := !r_divsqrt_killed && !IsKilledByBranch(io.brinfo, r_divsqrt_uop) && !io.req.bits.kill
       r_out_uop := r_divsqrt_uop
       r_out_uop.br_mask := GetNewBrMask(io.brinfo, r_divsqrt_uop)
-      r_out_wdata_double := Cat(Fill(48,io.out(16)),divsqrt.io.out)
+      r_out_wdata_double := Cat(Fill(48,divsqrt.io.out(16)),divsqrt.io.out)
       r_out_flags_double := divsqrt.io.exceptionFlags
 
       assert (r_divsqrt_val, "[fdiv] a response is being generated for no request.")

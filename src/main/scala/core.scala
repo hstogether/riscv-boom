@@ -801,6 +801,18 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    //hfp_pipeline.io.fromfp.valid := fp_pipeline.io.tohfp.valid &&
    //                                fp_pipeline.io.tohfp.bits.uop.fu_code === FUConstants.FU_F2HF
 
+   if(DEBUG_PRINTF_HFPU){
+      printf("Core---hfp.fromfp/fpp.fromhfp--------------------------------------------------------------\n")
+      printf("fp_pipeline.io.fromhfp:   valid=[%d]    uop.uopc=[%d]    data=[%x]\n",
+                                        fp_pipeline.io.fromhfp.valid.asUInt,
+                                        fp_pipeline.io.fromhfp.bits.uop.uopc,  fp_pipeline.io.fromhfp.bits.data)
+      printf("hfp_pipeline.io.fromfp:   valid=[%d]    uop.uopc=[%d]    rs1_data=[%x]    rs2_data=[%x]    rs3_data=[%x]\n",
+                                        hfp_pipeline.io.fromfp.valid.asUInt,
+                                        hfp_pipeline.io.fromfp.bits.uop.uopc,  hfp_pipeline.io.fromfp.bits.rs1_data,
+                                        hfp_pipeline.io.fromfp.bits.rs2_data,  hfp_pipeline.io.fromfp.bits.rs3_data)
+      printf("Core---hfp.fromfp/fpp.fromhfp--------------------------------------------------------------\n")
+   }
+
    //-------------------------------------------------------------
    //-------------------------------------------------------------
    // **** Load/Store Unit ****

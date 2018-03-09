@@ -780,10 +780,20 @@ class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    io.resp.bits.fflags.valid      := ihfpu.io.out.valid
    io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
    io.resp.bits.fflags.bits.flags := ihfpu.io.out.bits.exc
+
+   if(DEBUG_PRINTF_HFPU){
+      printf("IntToHFPUnit----------------------------------------------------------\n")
+      printf("io.req.valid=[%d]    req.in1=[%x]    req.in2=[%x]\n",
+              io.req.valid.asUInt, req.in1,        req.in2)
+      printf("io.out.valid=[%d]    io.out.bits.data=[%x]\n",
+              io.resp.bits.fflags.valid.asUInt, io.resp.bits.data)
+      printf("IntToHFPUnit----------------------------------------------------------\n")
+   }
+
 }
 
 class FPToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
-   num_stages = p(BoomKey).intToFpLatency, // TODO: using fpToHfpLatency -- Jecy
+   num_stages = p(BoomKey).fpToHfpLatency, // TODO: using fpToHfpLatency -- Jecy
    num_bypass_stages = 0,
    earliest_bypass_stage = 0,
    data_width = 65)(p)
@@ -800,13 +810,13 @@ class FPToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    req.in2 := io_req.rs2_data
    req.typ := ImmGenTyp(io_req.uop.imm_packed)
 
-   assert (!(io.req.valid && hfp_ctrl.fromint && req.in1(64).toBool),
-      "[func] IntToHFP integer input has 65th high-order bit set!")
+   //assert (!(io.req.valid && hfp_ctrl.fromfp && req.in1(64).toBool),
+   //   "[func] IntToHFP integer input has 65th high-order bit set!")
 
-   assert (!(io.req.valid && !hfp_ctrl.fromint),
+   assert (!(io.req.valid && !hfp_ctrl.fromfp),
       "[func] Only support fromInt micro-ops.")
 
-   val fphfpu = Module(new tile.FPToHFP(intToFpLatency)) // TODO: using fpToHfpLatency -- Jecy
+   val fphfpu = Module(new tile.FPToHFP(fpToHfpLatency)) // TODO: using fpToHfpLatency -- Jecy
    fphfpu.io.in.valid := io.req.valid
    fphfpu.io.in.bits := req
 
@@ -814,6 +824,15 @@ class FPToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    io.resp.bits.fflags.valid      := fphfpu.io.out.valid
    io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
    io.resp.bits.fflags.bits.flags := fphfpu.io.out.bits.exc
+
+   if(DEBUG_PRINTF_HFPU){
+      printf("FPToHFPUnit----------------------------------------------------------\n")
+      printf("io.req.valid=[%d]    req.in1=[%x]    req.in2=[%x]\n",
+              io.req.valid.asUInt, req.in1,        req.in2)
+      printf("io.out.valid=[%d]    io.out.bits.data=[%x]\n",
+              io.resp.bits.fflags.valid.asUInt, io.resp.bits.data)
+      printf("FPToHFPUnit----------------------------------------------------------\n")
+   }
 }
 
 

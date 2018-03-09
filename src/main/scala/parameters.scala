@@ -47,7 +47,10 @@ case class BoomCoreParams(
    imulLatency: Int = 3,
    fetchLatency: Int = 3,
    renameLatency: Int = 2,
-   regreadLatency: Int = 1
+   regreadLatency: Int = 1,
+   intToHfpLatency: Int = 2,
+   fpToHfpLatency: Int = 4,
+   hfpToFpLatency: Int = 4
 )
 
 trait HasBoomCoreParameters extends tile.HasCoreParameters
@@ -104,6 +107,13 @@ trait HasBoomCoreParameters extends tile.HasCoreParameters
    require (sfmaLatency == dfmaLatency)
 
    val intToFpLatency = boomParams.intToFpLatency
+   val intToHfpLatency = boomParams.intToHfpLatency
+   val fpToHfpLatency = if (rocketParams.hfpu.isDefined) rocketParams.hfpu.get.hfmaLatency else boomParams.fpToHfpLatency
+   val hfpToFpLatency = if (rocketParams.hfpu.isDefined) rocketParams.hfpu.get.hfmaLatency else boomParams.hfpToFpLatency
+   require( fpToHfpLatency == hfmaLatency)
+   require( hfpToFpLatency == fpToHfpLatency)
+   require( intToFpLatency == intToHfpLatency)
+   
 
    val fetchLatency = boomParams.fetchLatency // how many cycles does fetch occupy?
    require (fetchLatency == 3) // do not currently support changing this

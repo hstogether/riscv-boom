@@ -356,6 +356,15 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    exe_units.ihfpu_unit.io.req <> io.fromint
    exe_units.fphfpu_unit.io.req <> io.fromfp
 
+   if(DEBUG_PRINTF_HFPU){
+      printf("HfpPipeline--io.fromint/io.fromfp-----------------------------------------------------------------------------\n")
+      printf("io.fromint.uop.uopc=[%d]    io.fromint.rs1_data=[%x]    io.fromint.rs2_data=[%x]    io.fromint.rs3_data=[%x]\n",
+              io.fromint.bits.uop.uopc,        io.fromint.bits.rs1_data,        io.fromint.bits.rs2_data,        io.fromint.bits.rs3_data)
+      printf("io.fromfp.uop.uopc=[%d]     io.fromfp.rs1_data =[%x]    io.fromfp.rs2_data =[%x]    io.fromfp.rs3_data =[%x]\n",
+              io.fromfp.bits.uop.uopc,         io.fromfp.bits.rs1_data,         io.fromfp.bits.rs2_data,         io.fromfp.bits.rs3_data)
+      printf("HfpPipeline--io.fromint/io.fromfp-----------------------------------------------------------------------------\n")
+   }
+
    //-------------------------------------------------------------
    // **** Writeback Stage ****
    //-------------------------------------------------------------
@@ -410,10 +419,12 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    }
    ll_wbarb.io.in(1) <> ihfpu_resp
    ll_wbarb.io.in(2) <> fphfpu_resp
-   ll_wbarb.io.in(1).valid := ihfpu_resp.valid && ihfpu_resp.bits.uop.dst_rtype === RT_FHT
-   ll_wbarb.io.in(1).bits  := ihfpu_resp.bits
-   ll_wbarb.io.in(2).valid := fphfpu_resp.valid && fphfpu_resp.bits.uop.dst_rtype === RT_FHT
-   ll_wbarb.io.in(2).bits  := fphfpu_resp.bits
+   //ll_wbarb.io.in(1).valid := ihfpu_resp.valid && ihfpu_resp.bits.uop.dst_rtype === RT_FHT
+   //ll_wbarb.io.in(1).bits  := ihfpu_resp.bits
+   //ll_wbarb.io.in(2).valid := fphfpu_resp.valid && fphfpu_resp.bits.uop.dst_rtype === RT_FHT
+   //ll_wbarb.io.in(2).bits  := fphfpu_resp.bits
+   assert( !(ll_wbarb.io.in(1).valid) || (ll_wbarb.io.in(1).valid && ll_wbarb.io.in(1).bits.uop.dst_rtype === RT_FHT))
+   assert( !(ll_wbarb.io.in(2).valid) || (ll_wbarb.io.in(2).valid && ll_wbarb.io.in(2).bits.uop.dst_rtype === RT_FHT))
    if (regreadLatency > 0) {
       // Cut up critical path by delaying the write by a cycle.
       // Wakeup signal is sent on cycle S0, write is now delayed until end of S1,

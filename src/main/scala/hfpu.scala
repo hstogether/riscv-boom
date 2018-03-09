@@ -51,12 +51,12 @@ class UOPCodeHFPUDecoder extends Module
       BitPat(uopFCLASS_H) -> List(FCMD_MV_XF,  X,X,Y,N,N, N,X,N,Y,N,Y,N,N,N,N,N,N, N,N,Y,N),
       BitPat(uopFMV_H_X)  -> List(FCMD_MV_FX,  X,X,N,N,N, X,X,N,Y,Y,N,N,N,N,Y,N,N, N,N,Y,N),
       BitPat(uopFMV_X_H)  -> List(FCMD_MV_XF,  X,X,Y,N,N, N,X,N,Y,N,Y,N,N,Y,N,N,N, N,N,Y,N),
-      BitPat(uopFMV_H_F)  -> List(FCMD_MV_XF,  X,X,Y,N,N, N,X,N,Y,N,N,Y,N,N,Y,N,N, N,N,Y,N),
-      BitPat(uopFMV_F_H)  -> List(FCMD_MV_XF,  X,X,Y,N,N, N,X,N,Y,N,N,N,Y,Y,N,N,N, N,N,Y,N),
-      BitPat(uopFCVT_H_S) -> List(FCMD_CVT_FF, X,X,Y,N,N, N,X,Y,Y,N,N,Y,N,N,Y,Y,N, N,N,Y,Y), // TODO: is Single? -- Jecy
-      BitPat(uopFCVT_H_D) -> List(FCMD_CVT_FF, X,X,Y,N,N, N,X,N,Y,N,N,Y,N,N,Y,Y,N, N,N,Y,Y),
-      BitPat(uopFCVT_S_H) -> List(FCMD_CVT_FF, X,X,Y,N,N, N,X,Y,Y,N,N,N,Y,Y,N,Y,N, N,N,Y,Y), // TODO: is Single? -- Jecy
-      BitPat(uopFCVT_D_H) -> List(FCMD_CVT_FF, X,X,Y,N,N, N,X,N,Y,N,N,N,Y,Y,N,Y,N, N,N,Y,Y),
+      BitPat(uopFMV_H_F)  -> List(FCMD_MV_HF,  X,X,Y,N,N, N,X,N,Y,N,N,Y,N,N,Y,N,N, N,N,Y,N),
+      BitPat(uopFMV_F_H)  -> List(FCMD_MV_FH,  X,X,Y,N,N, N,X,N,Y,N,N,N,Y,Y,N,N,N, N,N,Y,N),
+      BitPat(uopFCVT_H_S) -> List(FCMD_CVT_FF, X,X,Y,N,N, N,X,Y,Y,N,N,Y,N,N,Y,N,N, N,N,Y,Y), // TODO: is Single? -- Jecy is fastpipe? Y
+      BitPat(uopFCVT_H_D) -> List(FCMD_CVT_FF, X,X,Y,N,N, N,X,N,Y,N,N,Y,N,N,Y,N,N, N,N,Y,Y), // if fastpipe? Y
+      BitPat(uopFCVT_S_H) -> List(FCMD_CVT_FF, X,X,Y,N,N, N,X,Y,Y,N,N,N,Y,Y,N,N,N, N,N,Y,Y), // TODO: is Single? -- Jecy is fastpipe? Y
+      BitPat(uopFCVT_D_H) -> List(FCMD_CVT_FF, X,X,Y,N,N, N,X,N,Y,N,N,N,Y,Y,N,N,N, N,N,Y,Y),
 
       BitPat(uopFCVT_H_W) -> List(FCMD_CVT_FI, X,X,N,N,N, X,X,N,Y,Y,N,N,N,N,N,N,N, N,N,Y,Y),
       BitPat(uopFCVT_H_WU)-> List(FCMD_CVT_FI, X,X,N,N,N, X,X,N,Y,Y,N,N,N,N,N,N,N, N,N,Y,Y),
@@ -142,9 +142,18 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
    val hfpiu_result  = Wire(new tile.FPResult)
    hfpiu_result.data := hfpiu_out.bits.toint
    hfpiu_result.exc  := hfpiu_out.bits.exc
+ 
+   val hfpfu = Module(new tile.HFPToFP)
+   hfpfu.io.in.valid := io.req.valid && hfp_ctrl.tofp
+   hfpfu.io.in.bits :=req
+   val hfpfu_out = Pipe(Reg(next=hfpfu.io.in.valid && !hfp_ctrl.fastpipe),
+                        hfpfu.io.out.bits, hfpu_latency-1)
+   val hfpfu_result = Wire(new tile.FPResult)
+   hfpfu_result.data := hfpfu_out.bits.data
+   hfpfu_result.exc  := hfpfu_out.bits.exc
 
    // Modify to work for HFP
-   val hfpmu = Module(new tile.HFPToFP(hfpu_latency)) // latency 2 for rocket
+   val hfpmu = Module(new tile.HFPToHFP(hfpu_latency)) // latency 2 for rocket
    hfpmu.io.in.valid := io.req.valid && hfp_ctrl.fastpipe
    hfpmu.io.in.bits := req
    hfpmu.io.lt := hfpiu.io.out.bits.lt
@@ -154,8 +163,9 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
                     hfpmu.io.out.valid ||
                     hfma.io.out.valid
    val hfpu_out   = Mux(hfma.io.out.valid, hfma.io.out.bits,
-                                           Mux(hfpiu_out.valid,   hfpiu_result,
-                                                                  hfpmu.io.out.bits))
+                    Mux(hfpiu_out.valid,   hfpiu_result,
+                    Mux(hfpfu_out.valid,   hfpfu_result,
+                                           hfpmu.io.out.bits)))
 
    io.resp.bits.data              := hfpu_out.data
    io.resp.bits.fflags.valid      := io.resp.valid
@@ -165,16 +175,22 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
       printf("HFPU-Start--------------------------------------------------------------------------------------------\n")
       printf("io.req.bits.uop.uopc=[%d]    req.cmd=[%d]    req.rs1=[%x]    req.rs2=[%x]    req.rs3=[%x]\n",
               io_req.uop.uopc,             req.cmd,        io_req.rs1_data,io_req.rs2_data,io_req.rs3_data);
-      printf("  hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && hfp_ctrl.half && !hfp_ctrl.single\n")
-      printf("  %d                  %d              %d              %d               %d\n",
-                hfma.io.in.valid.asUInt,io.req.valid.asUInt,hfp_ctrl.fma.asUInt,hfp_ctrl.half.asUInt,(!hfp_ctrl.single).asUInt)
-      printf("  io_req.uop.imm_packed=[%d]    ImmGenTyp(io_req.uop.imm_packed)=[%d]    req.typ=[%d]\n",
-                io_req.uop.imm_packed,        ImmGenTyp(io_req.uop.imm_packed),        req.typ)
-      printf("hfma.io.in.valid=[%d]    hfma.io.rs1=[%x]    hfma.io.rs2=[%x]    hfma.io.rs3=[%x]\n",
-              hfma.io.in.valid.asUInt, hfma.io.in.bits.in1,hfma.io.in.bits.in2,hfma.io.in.bits.in3);
-      printf("hfma.io.out=[%x]    hfma.io.out.valid=[%d]\n",hfma.io.out.bits.data,hfma.io.out.valid.asUInt);
+      //printf("  hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && hfp_ctrl.half && !hfp_ctrl.single\n")
+      //printf("  %d                  %d              %d              %d               %d\n",
+      //          hfma.io.in.valid.asUInt,io.req.valid.asUInt,hfp_ctrl.fma.asUInt,hfp_ctrl.half.asUInt,(!hfp_ctrl.single).asUInt)
+      //printf("  io_req.uop.imm_packed=[%d]    ImmGenTyp(io_req.uop.imm_packed)=[%d]    req.typ=[%d]\n",
+      //          io_req.uop.imm_packed,        ImmGenTyp(io_req.uop.imm_packed),        req.typ)
+      //printf("hfma.io.in.valid=[%d]    hfma.io.rs1=[%x]    hfma.io.rs2=[%x]    hfma.io.rs3=[%x]\n",
+      //        hfma.io.in.valid.asUInt, hfma.io.in.bits.in1,hfma.io.in.bits.in2,hfma.io.in.bits.in3);
+      printf("hfpfu.io.in.valid=[%d]    !hfp_ctrl.fastpipe=[%d]    hfpfu.io.out.bits.data=[%x]    hfpu_latency-1=[%d]\n",
+              hfpfu.io.in.valid.asUInt, (!hfp_ctrl.fastpipe).asUInt,hfpfu.io.out.bits.data,       UInt(hfpu_latency-1))
+      printf("hfma.io.in.valid=[%d]    hfpiu.io.in.valid=[%d]    hfpfu.io.in.valid=[%d]    hfpmu.io.in.valid=[%d]\n",
+              hfma.io.in.valid.asUInt, hfpiu.io.in.valid.asUInt, hfpfu.io.in.valid.asUInt, hfpmu.io.in.valid.asUInt)
+      printf("hfma.io.out.valid=[%d]  hfpiu_out.valid =[%d]     hfpfu_out.valid=[%d]      hfpmu.io.out.valid=[%d]\n",
+              hfma.io.out.valid.asUInt, hfpiu_out.valid.asUInt, hfpfu_out.valid.asUInt,   hfpmu.io.out.valid.asUInt)
+      printf("hfma.io.out=[%x]         hfpiu_result=[%x]    hfpfu_result=[%x]    hfpmu.io.out=[%x]\n",
+              hfma.io.out.bits.data,   hfpiu_result.data,   hfpfu_result.data,   hfpmu.io.out.bits.data);
       printf("resp.data=[%x]    resp.valid=[%d]\n",io.resp.bits.data,io.resp.valid.asUInt);
-      printf("hfpiu_out.valid=[%d]    hfpmu.io.out.valid=[%d]    hfma.io.out.valid=[%d]\n",hfpiu_out.valid.asUInt,hfpmu.io.out.valid.asUInt,hfma.io.out.valid.asUInt)
       printf("HFPU-End--------------------------------------------------------------------------------------------\n")
    }
 

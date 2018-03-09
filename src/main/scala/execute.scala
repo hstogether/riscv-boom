@@ -343,9 +343,10 @@ class ALUExeUnit(
 
 // FPU-only unit, with optional second write-port for ToInt micro-ops.
 class FPUExeUnit(
-   has_fpu  : Boolean = true,
-   has_fdiv : Boolean = false,
-   has_fpiu : Boolean = false
+   has_fpu   : Boolean = true,
+   has_fdiv  : Boolean = false,
+   has_fpiu  : Boolean = false,
+   has_fphfpu: Boolean = false
    )
    (implicit p: Parameters)
    extends ExecutionUnit(
@@ -357,7 +358,8 @@ class FPUExeUnit(
       has_alu  = false,
       has_fpu  = has_fpu,
       has_fdiv = has_fdiv,
-      has_fpiu = has_fpiu)(p)
+      has_fpiu = has_fpiu,
+      has_fphfpu = has_fphfpu)(p)
 {
    println ("     ExeUnit--")
    if (has_fpu) println ("       - FPU (Latency: " + dfmaLatency + ")")
@@ -761,7 +763,7 @@ class FPToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
    io.bypass <> fphfpu.io.bypass
 
    // buffer up results since we share write-port on integer regfile.
-   val queue = Module(new QueueForMicroOpWithData(entries = p(BoomKey).intToFpLatency + 3, data_width)) // TODO being overly conservative
+   val queue = Module(new QueueForMicroOpWithData(entries = p(BoomKey).fpToHfpLatency + 3, data_width)) // TODO being overly conservative
    queue.io.enq.valid       := fphfpu.io.resp.valid
    queue.io.enq.bits.uop    := fphfpu.io.resp.bits.uop
    queue.io.enq.bits.data   := fphfpu.io.resp.bits.data
@@ -803,7 +805,7 @@ class IntToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
    io.bypass <> ihfpu.io.bypass
 
    // buffer up results since we share write-port on integer regfile.
-   val queue = Module(new QueueForMicroOpWithData(entries = p(BoomKey).intToFpLatency + 3, data_width)) // TODO being overly conservative
+   val queue = Module(new QueueForMicroOpWithData(entries = p(BoomKey).intToHfpLatency + 3, data_width)) // TODO being overly conservative
    queue.io.enq.valid       := ihfpu.io.resp.valid
    queue.io.enq.bits.uop    := ihfpu.io.resp.bits.uop
    queue.io.enq.bits.data   := ihfpu.io.resp.bits.data

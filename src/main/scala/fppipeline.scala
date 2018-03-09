@@ -129,12 +129,20 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
    //-------------------------------------------------------------
 
    // Output (Issue)
+   // 1 issue_unit and 1 exeunite that need to be issued. -- Jecy
+   val fphfpu_idx = exe_units.length - 2
+   require(exe_units(fphfpu_idx).supportedFuncUnits.fphfpu)
+
    for (i <- 0 until issue_unit.issue_width)
    {
       iss_valids(i) := issue_unit.io.iss_valids(i)
       iss_uops(i) := issue_unit.io.iss_uops(i)
 
       var fu_types = exe_units(i).io.fu_types
+      if (i == fphfpu_idx){
+         fu_types = fu_types | FUConstants.FU_F2HF
+      }
+
       if (exe_units(i).supportedFuncUnits.fdiv && regreadLatency > 0)
       {
          val fdiv_issued = iss_valids(i) && iss_uops(i).fu_code_is(FU_FDV)
@@ -200,6 +208,17 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
       io.tohfp := fregister_read.io.exe_reqs(w)
       io.tohfp.valid := fregister_read.io.exe_reqs(w).valid &&
                         fregister_read.io.exe_reqs(w).bits.uop.fu_code === FUConstants.FU_F2HF
+
+     if(DEBUG_PRINTF_HFPU){
+        printf("Fppipeline----fregister_read----------------------------------------------------------------------------------------------------------------------------------\n")
+        printf("fregister_read.io.exe_reqs(%d).valid=[%d]    fregister_read.io.exe_reqs(%d).bits.uop.uopc=[%d]    fregister_read.io.exe_reqs(%d).bits.uop.fu_code=[%d]\nfregister_read.io.exe_reqs(%d).bits.rs1_data=[%x]    fregister_read.io.exe_reqs(%d).bits.rs2_data=[%x]    fregister_read.io.exe_reqs(%d).bits.rs3_data=[%x]\n",
+                UInt(w),fregister_read.io.exe_reqs(w).valid, UInt(w),fregister_read.io.exe_reqs(w).bits.uop.uopc, UInt(w),fregister_read.io.exe_reqs(w).bits.uop.fu_code,
+                UInt(w),fregister_read.io.exe_reqs(w).bits.rs1_data, UInt(w),fregister_read.io.exe_reqs(w).bits.rs2_data, UInt(w),fregister_read.io.exe_reqs(w).bits.rs3_data)
+       printf("io.tohfp.valid=[%d]    io.tohfp.bits.uop.uopc=[%d]    io.tohfp.bits.uop.fu_code=[%d]\nio.tohfp.bits.rs1_data=[%x]    io.tohfp.bits.rs2_data=[%x]    io.tohfp.bits.rs3_data=[%x]\n",
+               io.tohfp.valid.asUInt, io.tohfp.bits.uop.uopc,        io.tohfp.bits.uop.fu_code,
+               io.tohfp.bits.rs1_data,        io.tohfp.bits.rs2_data,        io.tohfp.bits.rs3_data)
+        printf("Fppipeline----fregister_read----------------------------------------------------------------------------------------------------------------------------------\n")
+     }
 
    }
    require (exe_units.num_total_bypass_ports == 0)

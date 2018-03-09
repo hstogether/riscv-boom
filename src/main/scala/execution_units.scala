@@ -152,7 +152,7 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
          exe_units += Module(new HFPUExeUnit(has_hfpu = true,
                                              has_hfdiv = usingHFDivSqrt && (w==0),
                                              has_hfpiu = (w==0),
-                                             has_hfpfpu = (w==0)))
+                                             has_hfpfpu = usingFPU && (w==0)))
       }
       exe_units += Module(new IntToHFPExeUnit())
       exe_units += Module(new FPToHFPExeUnit())
@@ -164,6 +164,7 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
       for (w <- 0 until fp_width) {
          exe_units += Module(new FPUExeUnit(has_fpu = true,
                                             has_fdiv = usingFDivSqrt && (w==0),
+                                            has_fphfpu = usingHFPU && (w==0),
                                             has_fpiu = (w==0)))
       }
       exe_units += Module(new IntToFPExeUnit())
