@@ -703,12 +703,16 @@ class HFPUUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    io.resp.bits.fflags.bits.flags := hfpu.io.resp.bits.fflags.bits.flags // kill me now
 
    if(DEBUG_PRINTF_HFPU){
-      printf("HFPUUnit-Start--------------------------------------------------------------------------------------------\n")
-      printf("io.req.rs1=[%x]    io.req.rs2=[%x]    io.req.rs3=[%x]\n",io.req.bits.rs1_data,io.req.bits.rs2_data,io.req.bits.rs3_data);
-      printf("hfpu.io.req.rs1=[%x]    hfpu.io.req.rs2=[%x]    hfpu.io.req.rs3=[%x]\n",hfpu.io.req.bits.rs1_data,hfpu.io.req.bits.rs2_data,hfpu.io.req.bits.rs3_data);
-      printf("hfpu.io.resp.data=[%x]    hfpu.io.resp.valid=[%d]\n",hfpu.io.resp.bits.data,hfpu.io.resp.bits.fflags.valid.asUInt);
-      printf("io.resp.data=[%x]    io.resp.valid=[%d]\n",io.resp.bits.data,io.resp.bits.fflags.valid.asUInt);
-      printf("HFPUUnit-End--------------------------------------------------------------------------------------------\n")
+      printf("HFPUUnit-Start------------------------------------------------------------------------------------\n")
+      printf("io.req.rs1=[%x]    io.req.rs2=[%x]    io.req.rs3=[%x]\n",
+              io.req.bits.rs1_data,io.req.bits.rs2_data,io.req.bits.rs3_data);
+      printf("hfpu.io.req.rs1=[%x]    hfpu.io.req.rs2=[%x]    hfpu.io.req.rs3=[%x]\n",
+              hfpu.io.req.bits.rs1_data,hfpu.io.req.bits.rs2_data,hfpu.io.req.bits.rs3_data);
+      printf("hfpu.io.resp.data=[%x]    hfpu.io.resp.valid=[%d]\n",
+              hfpu.io.resp.bits.data,hfpu.io.resp.bits.fflags.valid.asUInt);
+      printf("io.resp.data=[%x][%d]    io.resp.valid=[%d]\n",
+              io.resp.bits.data, io.resp.bits.fflags.bits.flags, io.resp.bits.fflags.valid.asUInt);
+      printf("HFPUUnit-End--------------------------------------------------------------------------------------\n")
    }
 
 
@@ -746,6 +750,15 @@ class IntToFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    io.resp.bits.fflags.valid      := ifpu.io.out.valid
    io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
    io.resp.bits.fflags.bits.flags := ifpu.io.out.bits.exc
+
+   if(DEBUG_PRINTF_HFPU){
+      printf("IntToFPUnit----------------------------------------------------------\n")
+      printf("io.req.valid=[%d]    req.in1=[%x]    req.in2=[%x]\n",
+              io.req.valid.asUInt, req.in1,        req.in2)
+      printf("io.out.valid=[%d]    io.out.bits.data=[%x][%d]\n",
+              io.resp.bits.fflags.valid.asUInt, io.resp.bits.data, io.resp.bits.fflags.bits.flags)
+      printf("IntToFPUnit----------------------------------------------------------\n")
+   }
 }
 
 class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
@@ -785,8 +798,8 @@ class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
       printf("IntToHFPUnit----------------------------------------------------------\n")
       printf("io.req.valid=[%d]    req.in1=[%x]    req.in2=[%x]\n",
               io.req.valid.asUInt, req.in1,        req.in2)
-      printf("io.out.valid=[%d]    io.out.bits.data=[%x]\n",
-              io.resp.bits.fflags.valid.asUInt, io.resp.bits.data)
+      printf("io.out.valid=[%d]    io.out.bits.data=[%x][%d]\n",
+              io.resp.bits.fflags.valid.asUInt, io.resp.bits.data, io.resp.bits.fflags.bits.flags)
       printf("IntToHFPUnit----------------------------------------------------------\n")
    }
 
@@ -829,8 +842,8 @@ class FPToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
       printf("FPToHFPUnit----------------------------------------------------------\n")
       printf("io.req.valid=[%d]    req.in1=[%x]    req.in2=[%x]\n",
               io.req.valid.asUInt, req.in1,        req.in2)
-      printf("io.out.valid=[%d]    io.out.bits.data=[%x]\n",
-              io.resp.bits.fflags.valid.asUInt, io.resp.bits.data)
+      printf("io.out.valid=[%d]    io.out.bits.data=[%x][%d]\n",
+              io.resp.bits.fflags.valid.asUInt, io.resp.bits.data, io.resp.bits.fflags.bits.flags)
       printf("FPToHFPUnit----------------------------------------------------------\n")
    }
 }

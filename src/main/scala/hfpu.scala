@@ -63,10 +63,10 @@ class UOPCodeHFPUDecoder extends Module
       BitPat(uopFCVT_H_L) -> List(FCMD_CVT_FI, X,X,N,N,N, X,X,N,Y,Y,N,N,N,N,Y,N,N, N,N,Y,Y),
       BitPat(uopFCVT_H_LU)-> List(FCMD_CVT_FI, X,X,N,N,N, X,X,N,Y,Y,N,N,N,N,Y,N,N, N,N,Y,Y),
 
-      BitPat(uopFCVT_W_H) -> List(FCMD_CVT_IF, X,X,Y,N,N, N,X,N,Y,N,Y,N,N,N,N,N,N, N,N,Y,Y),
-      BitPat(uopFCVT_WU_H)-> List(FCMD_CVT_IF, X,X,Y,N,N, N,X,N,Y,N,Y,N,N,N,N,N,N, N,N,Y,Y),
-      BitPat(uopFCVT_L_H) -> List(FCMD_CVT_IF, X,X,Y,N,N, N,X,N,Y,N,Y,N,N,N,N,N,N, N,N,Y,Y),
-      BitPat(uopFCVT_LU_H)-> List(FCMD_CVT_IF, X,X,Y,N,N, N,X,N,Y,N,Y,N,N,N,N,N,N, N,N,Y,Y),
+      BitPat(uopFCVT_W_H) -> List(FCMD_CVT_IF, X,X,Y,N,N, N,X,N,Y,N,Y,N,N,Y,N,N,N, N,N,Y,Y),
+      BitPat(uopFCVT_WU_H)-> List(FCMD_CVT_IF, X,X,Y,N,N, N,X,N,Y,N,Y,N,N,Y,N,N,N, N,N,Y,Y),
+      BitPat(uopFCVT_L_H) -> List(FCMD_CVT_IF, X,X,Y,N,N, N,X,N,Y,N,Y,N,N,Y,N,N,N, N,N,Y,Y),
+      BitPat(uopFCVT_LU_H)-> List(FCMD_CVT_IF, X,X,Y,N,N, N,X,N,Y,N,Y,N,N,Y,N,N,N, N,N,Y,Y),
 
       BitPat(uopFEQ_H)    -> List(FCMD_CMP,    X,X,Y,Y,N, N,N,N,Y,N,Y,N,N,N,N,N,N, N,N,N,Y),
       BitPat(uopFLT_H)    -> List(FCMD_CMP,    X,X,Y,Y,N, N,N,N,Y,N,Y,N,N,N,N,N,N, N,N,N,Y),
@@ -188,9 +188,13 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
               hfma.io.in.valid.asUInt, hfpiu.io.in.valid.asUInt, hfpfu.io.in.valid.asUInt, hfpmu.io.in.valid.asUInt)
       printf("hfma.io.out.valid=[%d]  hfpiu_out.valid =[%d]     hfpfu_out.valid=[%d]      hfpmu.io.out.valid=[%d]\n",
               hfma.io.out.valid.asUInt, hfpiu_out.valid.asUInt, hfpfu_out.valid.asUInt,   hfpmu.io.out.valid.asUInt)
-      printf("hfma.io.out=[%x]         hfpiu_result=[%x]    hfpfu_result=[%x]    hfpmu.io.out=[%x]\n",
-              hfma.io.out.bits.data,   hfpiu_result.data,   hfpfu_result.data,   hfpmu.io.out.bits.data);
-      printf("resp.data=[%x]    resp.valid=[%d]\n",io.resp.bits.data,io.resp.valid.asUInt);
+      printf("hfma.io.out=[%x][%d]    hfpiu_result=[%x][%d]    hfpfu_result=[%x][%d]    hfpmu.io.out=[%x][%d]\n",
+              hfma.io.out.bits.data, hfma.io.out.bits.exc,   
+              hfpiu_result.data, hfpiu_result.exc,
+              hfpfu_result.data, hfpfu_result.exc,
+              hfpmu.io.out.bits.data, hfpmu.io.out.bits.exc);
+      printf("resp.data=[%x][%d]    resp.valid=[%d]\n",
+              io.resp.bits.data, io.resp.bits.fflags.bits.flags, io.resp.valid.asUInt);
       printf("HFPU-End--------------------------------------------------------------------------------------------\n")
    }
 
