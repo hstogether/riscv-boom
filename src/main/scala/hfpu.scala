@@ -58,10 +58,10 @@ class UOPCodeHFPUDecoder extends Module
       BitPat(uopFCVT_S_H) -> List(FCMD_CVT_FF, X,X,Y,N,N, N,X,Y,Y,N,N,N,Y,Y,N,N,N, N,N,Y,Y), // TODO: is Single? -- Jecy is fastpipe? Y
       BitPat(uopFCVT_D_H) -> List(FCMD_CVT_FF, X,X,Y,N,N, N,X,N,Y,N,N,N,Y,Y,N,N,N, N,N,Y,Y),
 
-      BitPat(uopFCVT_H_W) -> List(FCMD_CVT_FI, X,X,N,N,N, X,X,N,Y,Y,N,N,N,N,N,N,N, N,N,Y,Y),
-      BitPat(uopFCVT_H_WU)-> List(FCMD_CVT_FI, X,X,N,N,N, X,X,N,Y,Y,N,N,N,N,N,N,N, N,N,Y,Y),
-      BitPat(uopFCVT_H_L) -> List(FCMD_CVT_FI, X,X,N,N,N, X,X,N,Y,Y,N,N,N,N,N,N,N, N,N,Y,Y),
-      BitPat(uopFCVT_H_LU)-> List(FCMD_CVT_FI, X,X,N,N,N, X,X,N,Y,Y,N,N,N,N,N,N,N, N,N,Y,Y),
+      BitPat(uopFCVT_H_W) -> List(FCMD_CVT_FI, X,X,N,N,N, X,X,N,Y,Y,N,N,N,N,Y,N,N, N,N,Y,Y),
+      BitPat(uopFCVT_H_WU)-> List(FCMD_CVT_FI, X,X,N,N,N, X,X,N,Y,Y,N,N,N,N,Y,N,N, N,N,Y,Y),
+      BitPat(uopFCVT_H_L) -> List(FCMD_CVT_FI, X,X,N,N,N, X,X,N,Y,Y,N,N,N,N,Y,N,N, N,N,Y,Y),
+      BitPat(uopFCVT_H_LU)-> List(FCMD_CVT_FI, X,X,N,N,N, X,X,N,Y,Y,N,N,N,N,Y,N,N, N,N,Y,Y),
 
       BitPat(uopFCVT_W_H) -> List(FCMD_CVT_IF, X,X,Y,N,N, N,X,N,Y,N,Y,N,N,N,N,N,N, N,N,Y,Y),
       BitPat(uopFCVT_WU_H)-> List(FCMD_CVT_IF, X,X,Y,N,N, N,X,N,Y,N,Y,N,N,N,N,N,N, N,N,Y,Y),
