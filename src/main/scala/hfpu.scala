@@ -130,7 +130,7 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
 
 
    val hfma = Module(new tile.FPUFMAPipe(latency = hfpu_latency, expWidth = 5, sigWidth = 11))
-   hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && hfp_ctrl.half && !hfp_ctrl.single // TODO:FCVT ??  req.typ === Bits(2)
+   hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && hfp_ctrl.half && !hfp_ctrl.single
    hfma.io.in.bits := req
 
 
@@ -173,8 +173,8 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
 
    if(DEBUG_PRINTF_HFPU){
       printf("HFPU-Start--------------------------------------------------------------------------------------------\n")
-      printf("io.req.bits.uop.uopc=[%d]    req.cmd=[%d]    req.rs1=[%x]    req.rs2=[%x]    req.rs3=[%x]\n",
-              io_req.uop.uopc,             req.cmd,        io_req.rs1_data,io_req.rs2_data,io_req.rs3_data);
+      printf("io.req.bits.uop.uopc=[%d]    req.cmd=[%d]    req.rm=[%d]    req.rs1=[%x]    req.rs2=[%x]    req.rs3=[%x]\n",
+              io_req.uop.uopc,             req.cmd,        req.rm,        io_req.rs1_data,io_req.rs2_data,io_req.rs3_data);
       //printf("  hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && hfp_ctrl.half && !hfp_ctrl.single\n")
       //printf("  %d                  %d              %d              %d               %d\n",
       //          hfma.io.in.valid.asUInt,io.req.valid.asUInt,hfp_ctrl.fma.asUInt,hfp_ctrl.half.asUInt,(!hfp_ctrl.single).asUInt)
