@@ -991,8 +991,35 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    //ll_wbarb.io.in(1).valid := fp_pipeline.io.toint.valid && fp_pipeline.io.toint.bits.uop.dst_rtype === RT_FIX
    //ll_wbarb.io.in(1).bits := fp_pipeline.io.toint.bits
    //ll_wbarb.io.in(2).valid := hfp_pipeline.io.toint.valid && hfp_pipeline.io.toint.bits.uop.dst_rtype === RT_FIX
-   //ll_wbarb.io.in(2).bits := hfp_pipeline.io.toint.bits
+   //ll_wbarb.io.in(2).bits.uop.uopc := hfp_pipeline.io.toint.bits.uop.uopc
    iregfile.io.write_ports(llidx) <> WritePort(ll_wbarb.io.out, IPREG_SZ, xLen)
+   if(DEBUG_PRINTF_HFPU){
+       printf("core-hfp_pipeline.io.toint--------------------------------------------\n")
+
+       printf("core-mem_resp.valid=[%d]    mem_resp.bits.uop.uopc=[%d]    mem_resp.bits.data=[%x]    mem_resp.bits.uop.dst_rtype=[%d]\n",
+               (mem_resp.valid && mem_resp.bits.uop.ctrl.rf_wen && mem_resp.bits.uop.dst_rtype === RT_FIX).asUInt, 
+                                           mem_resp.bits.uop.uopc,        mem_resp.bits.data,        mem_resp.bits.uop.dst_rtype) 
+       printf("core-fp-toint.valid=[%d]    toint.bits.uop.uopc=[%d]    toint.bits.data=[%x]    toint.bits.uop.dst_rtype=[%d]\n",
+               fp_pipeline.io.toint.valid.asUInt, fp_pipeline.io.toint.bits.uop.uopc,
+               fp_pipeline.io.toint.bits.data,    fp_pipeline.io.toint.bits.uop.dst_rtype) 
+       printf("core-hfp-toint.valid=[%d]    toint.bits.uop.uopc=[%d]    toint.bits.data=[%x]    toint.bits.uop.dst_rtype=[%d]\n",
+               hfp_pipeline.io.toint.valid.asUInt, hfp_pipeline.io.toint.bits.uop.uopc,
+               hfp_pipeline.io.toint.bits.data,    hfp_pipeline.io.toint.bits.uop.dst_rtype) 
+       printf("core-ll_wbarb-in0.valid=[%d]    in0.uop.uopc=[%d]    in0.data=[%x]    in0.uop.dst_rtype=[%d]\n",
+               ll_wbarb.io.in(0).valid.asUInt, ll_wbarb.io.in(0).bits.uop.uopc,
+               ll_wbarb.io.in(0).bits.data,    ll_wbarb.io.in(0).bits.uop.dst_rtype)
+       printf("core-ll_wbarb-in1.valid=[%d]    in1.uop.uopc=[%d]    in1.data=[%x]    in1.uop.dst_rtype=[%d]\n",
+               ll_wbarb.io.in(1).valid.asUInt, ll_wbarb.io.in(1).bits.uop.uopc,
+               ll_wbarb.io.in(1).bits.data,    ll_wbarb.io.in(1).bits.uop.dst_rtype)
+       printf("core-ll_wbarb-in2.valid=[%d]    in2.uop.uopc=[%d]    in2.data=[%x]    in2.uop.dst_rtype=[%d]\n",
+               ll_wbarb.io.in(2).valid.asUInt, ll_wbarb.io.in(2).bits.uop.uopc,
+               ll_wbarb.io.in(2).bits.data,    ll_wbarb.io.in(2).bits.uop.dst_rtype)
+       printf("core-ll_wbarb-out.valid=[%d]    out.uop.uopc=[%d]     out.data=[%x]    out.uop.dst_rtype=[%d]\n",
+               ll_wbarb.io.out.valid.asUInt,   ll_wbarb.io.out.bits.uop.uopc,
+               ll_wbarb.io.out.bits.data,      ll_wbarb.io.out.bits.uop.dst_rtype)
+
+       printf("core-hfp_pipeline.io.toint--------------------------------------------\n")
+   }
 
    //TODO enable fromhfp
    fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
