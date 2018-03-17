@@ -55,6 +55,8 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
       //TODO -- hook up commit log stuff.
       val debug_tsc_reg    = UInt(INPUT, xLen)
+
+      val feedback         = UInt(INPUT, 10)
    }
 
    //**********************************
@@ -529,6 +531,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       }
    }
    require (w_cnt == fregfile.io.write_ports.length)
+   exe_units(0).io.feedback := io.feedback
 
 
    //-------------------------------------------------------------

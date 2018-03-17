@@ -992,9 +992,13 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    //ll_wbarb.io.in(1).bits := fp_pipeline.io.toint.bits
    //ll_wbarb.io.in(2).valid := hfp_pipeline.io.toint.valid && hfp_pipeline.io.toint.bits.uop.dst_rtype === RT_FIX
    //ll_wbarb.io.in(2).bits.uop.uopc := hfp_pipeline.io.toint.bits.uop.uopc
+
+   hfp_pipeline.io.feedback := Mux(ll_wbarb.io.in(2).valid && (ll_wbarb.io.in(0).valid || ll_wbarb.io.in(1).valid),
+                                   UInt(1,10),UInt(0))
    iregfile.io.write_ports(llidx) <> WritePort(ll_wbarb.io.out, IPREG_SZ, xLen)
    if(DEBUG_PRINTF_HFPU){
        printf("core-hfp_pipeline.io.toint--------------------------------------------\n")
+       printf("hfp_pipeline.io.feedback=[%x]\n",hfp_pipeline.io.feedback)
 
        printf("core-mem_resp.valid=[%d]    mem_resp.bits.uop.uopc=[%d]    mem_resp.bits.data=[%x]    mem_resp.bits.uop.dst_rtype=[%d]\n",
                (mem_resp.valid && mem_resp.bits.uop.ctrl.rf_wen && mem_resp.bits.uop.dst_rtype === RT_FIX).asUInt, 
@@ -1002,7 +1006,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
        printf("core-fp-toint.valid=[%d]    toint.bits.uop.uopc=[%d]    toint.bits.data=[%x]    toint.bits.uop.dst_rtype=[%d]\n",
                fp_pipeline.io.toint.valid.asUInt, fp_pipeline.io.toint.bits.uop.uopc,
                fp_pipeline.io.toint.bits.data,    fp_pipeline.io.toint.bits.uop.dst_rtype) 
-       printf("core-hfp-toint.valid=[%d]    toint.bits.uop.uopc=[%d]    toint.bits.data=[%x]    toint.bits.uop.dst_rtype=[%d]\n",
+       printf("core-hfp-toint.valid=[%d]    toint.bits.uop.uopc=[%d]    toint.bits.data=[%x]    toint.bits.uop.dst_rtype=[%d]\n\n",
                hfp_pipeline.io.toint.valid.asUInt, hfp_pipeline.io.toint.bits.uop.uopc,
                hfp_pipeline.io.toint.bits.data,    hfp_pipeline.io.toint.bits.uop.dst_rtype) 
        printf("core-ll_wbarb-in0.valid=[%d]    in0.uop.uopc=[%d]    in0.data=[%x]    in0.uop.dst_rtype=[%d]\n",
@@ -1073,7 +1077,7 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
                                         (wb_uop.dst_rtype === RT_FIX || wb_uop.dst_rtype === RT_FLT)
 
          val data = resp.bits.data
-         if (eu.hasFFlags || (eu.is_mem_unit && (usingFPU || usingHFPU)))
+         if (eu.hasFFlags || (eu.is_mem_unit && usingFPU)) //There is no HFPU
          {
             if (eu.hasFFlags)
             {

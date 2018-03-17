@@ -700,6 +700,9 @@ class Rob(width: Int,
    val fflags_val = Wire(Vec(width, Bool()))
    val fflags     = Wire(Vec(width, Bits(width=tile.FPConstants.FLAGS_SZ)))
 
+   if(DEBUG_PRINTF_HFPU){
+     printf("ROB-ASSERT------------------------------------------------\n")
+   }
    for (w <- 0 until width)
    {
       // TODO can I relax the ld/st constraint?
@@ -708,6 +711,13 @@ class Rob(width: Int,
                       !(io.commit.uops(w).is_load || io.commit.uops(w).is_store)
 
       fflags(w) := Mux(fflags_val(w), rob_head_fflags(w), Bits(0))
+      if(DEBUG_PRINTF_HFPU){
+         printf("rob-io.commit.valids(%d)=[%d]    io.commit.uops(%d).fp_val=[%d]    io.commit.uops(%d).hfp_val=[%d]    rob_head_fflags(%d)=[%x]\n",
+                 UInt(w),io.commit.valids(w).asUInt,          UInt(w),io.commit.uops(w).fp_val.asUInt,
+                 UInt(w),io.commit.uops(w).hfp_val.asUInt,    UInt(w),rob_head_fflags(w))
+         printf("rob-io.commit.uops(%d).uopc=[%d]    io.commit.uops(%d).fu_code=[%d]\n\n",
+                 UInt(w),io.commit.uops(w).uopc,     UInt(w),io.commit.uops(w).fu_code)
+      }
 
       assert (!(io.commit.valids(w) &&
                !(io.commit.uops(w).fp_val || io.commit.uops(w).hfp_val) &&
@@ -718,6 +728,9 @@ class Rob(width: Int,
                (io.commit.uops(w).is_load || io.commit.uops(w).is_store) &&
                rob_head_fflags(w) =/= Bits(0)),
                "Committed FP load or store has non-zero fflag bits.")
+   }
+   if(DEBUG_PRINTF_HFPU){
+     printf("ROB-ASSERT------------------------------------------------\n")
    }
    io.commit.fflags.valid := fflags_val.reduce(_|_)
    io.commit.fflags.bits  := fflags.reduce(_|_)
