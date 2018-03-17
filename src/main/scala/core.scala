@@ -993,13 +993,15 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    //ll_wbarb.io.in(2).valid := hfp_pipeline.io.toint.valid && hfp_pipeline.io.toint.bits.uop.dst_rtype === RT_FIX
    //ll_wbarb.io.in(2).bits.uop.uopc := hfp_pipeline.io.toint.bits.uop.uopc
 
-   hfp_pipeline.io.feedback := Mux(ll_wbarb.io.in(2).valid && (ll_wbarb.io.in(0).valid || ll_wbarb.io.in(1).valid),
+   hfp_pipeline.io.int_feedback := Mux(ll_wbarb.io.in(2).valid && (ll_wbarb.io.in(0).valid || ll_wbarb.io.in(1).valid),
                                    UInt(1,10),UInt(0))
+   hfp_pipeline.io.fp_feedback := fp_pipeline.io.tohfp_feedback
    iregfile.io.write_ports(llidx) <> WritePort(ll_wbarb.io.out, IPREG_SZ, xLen)
    if(DEBUG_PRINTF_HFPU){
        printf("core-hfp_pipeline.io.toint--------------------------------------------\n")
-       printf("hfp_pipeline.io.feedback=[%x]\n",hfp_pipeline.io.feedback)
 
+       printf("hfp_pipeline.io.int_feedback=[%x]    hfp_pipeline.io.fp_feedback=[%d]\n",
+               hfp_pipeline.io.int_feedback,        hfp_pipeline.io.fp_feedback)
        printf("core-mem_resp.valid=[%d]    mem_resp.bits.uop.uopc=[%d]    mem_resp.bits.data=[%x]    mem_resp.bits.uop.dst_rtype=[%d]\n",
                (mem_resp.valid && mem_resp.bits.uop.ctrl.rf_wen && mem_resp.bits.uop.dst_rtype === RT_FIX).asUInt, 
                                            mem_resp.bits.uop.uopc,        mem_resp.bits.data,        mem_resp.bits.uop.dst_rtype) 

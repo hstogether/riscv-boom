@@ -51,6 +51,8 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
       //TODO -- hook up commit log stuff.
       val debug_tsc_reg    = UInt(INPUT, xLen)
+
+      val tohfp_feedback   = UInt(OUTPUT,10)
    }
 
    //**********************************
@@ -248,6 +250,8 @@ class FpPipeline(implicit p: Parameters) extends BoomModule()(p)
    ll_wbarb.io.in(2) <> io.fromhfp
    assert( !(ll_wbarb.io.in(2).valid) || (ll_wbarb.io.in(2).valid && ll_wbarb.io.in(2).bits.uop.dst_rtype === RT_FLT))
 
+   io.tohfp_feedback := Mux(ll_wbarb.io.in(2).valid && (ll_wbarb.io.in(0).valid || ll_wbarb.io.in(1).valid),
+                            Bits(2,10),Bits(0,10))
    if (regreadLatency > 0) {
       // Cut up critical path by delaying the write by a cycle.
       // Wakeup signal is sent on cycle S0, write is now delayed until end of S1,

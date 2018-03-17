@@ -277,6 +277,116 @@ object AgePriorityEncoder
    }
 }
 
+// Assumption: enq.valid only high if not killed by branch (so don't check IsKilled on io.enq).
+class QueueForMicroOpWithDataLwl(entries: Int, data_width: Int)(implicit p: config.Parameters) extends BoomModule()(p)
+{
+   val io = IO(new Bundle
+   {
+      val feedback= Bool(INPUT)
+      val enq     = Decoupled(new ExeUnitResp(data_width)).flip
+      val deq     = Decoupled(new ExeUnitResp(data_width))
+
+      val brinfo  = new BrResolutionInfo().asInput
+      val flush   = Bool(INPUT)
+
+      val empty   = Bool(OUTPUT)
+      val count   = UInt(OUTPUT, log2Up(entries))
+   })
+
+   private val ram     = Mem(entries, new ExeUnitResp(data_width))
+   private val valids  = Reg(init = Vec.fill(entries) {Bool(false)})
+   private val brmasks = Reg(Vec(entries, UInt(width = MAX_BR_COUNT)))
+
+   private val enq_ptr = Counter(entries)
+   private val deq_ptr = Counter(entries)
+   private val maybe_full = Reg(init=false.B)
+
+   private val ptr_match = enq_ptr.value === deq_ptr.value
+   io.empty := ptr_match && !maybe_full
+   private val full = ptr_match && maybe_full
+   private val do_enq = Wire(init=io.enq.fire())
+
+   private val deq_ram_valid = Wire(init= !(io.empty))
+   private val do_deq = Wire(init=io.deq.ready && deq_ram_valid && !io.feedback)
+
+   for (i <- 0 until entries)
+   {
+      val mask = brmasks(i)
+      valids(i)  := valids(i) && !IsKilledByBranch(io.brinfo, mask) && !io.flush
+      when (valids(i)) {
+         brmasks(i) := GetNewBrMask(io.brinfo, mask)
+      }
+   }
+
+   when (!full) {
+      ram(enq_ptr.value) := io.enq.bits
+      valids(enq_ptr.value) := Mux(do_enq,true.B,false.B)//!IsKilledByBranch(io.brinfo, io.enq.bits.uop)
+      brmasks(enq_ptr.value) := GetNewBrMask(io.brinfo, io.enq.bits.uop)
+   }
+   //when (do_enq) {
+   //   ram(enq_ptr.value) := io.enq.bits
+   //   valids(enq_ptr.value) := true.B //!IsKilledByBranch(io.brinfo, io.enq.bits.uop)
+   //   brmasks(enq_ptr.value) := GetNewBrMask(io.brinfo, io.enq.bits.uop)
+   //   enq_ptr.inc()
+   //} otherwise {
+   //   ram(enq_ptr.value) := io.enq.bits
+   //   valids(enq_ptr.value) := false.B //!IsKilledByBranch(io.brinfo, io.enq.bits.uop)
+   //   brmasks(enq_ptr.value) := GetNewBrMask(io.brinfo, io.enq.bits.uop)
+   //   //ram(enq_ptr.value).uop := UInt(0) // Tomuch substructions need to be constructed.  -- Jecy
+   //   //ram(enq_ptr.value).data := UInt(0)
+   //   //ram(enq_ptr.value).fflags.valid := false.B
+   //   //ram(enq_ptr.value).fflags.bits.uop := UInt(0)
+   //   //ram(enq_ptr.value).fflags.bits.flags := UInt(0)
+   //   //valids(enq_ptr.value) := false.B
+   //   //brmasks(enq_ptr.value) := UInt(0)
+   //}
+   when (do_enq) {
+      enq_ptr.inc()
+   }
+   when (do_deq) {
+      deq_ptr.inc()
+   }
+   when (do_enq != do_deq) {
+      maybe_full := do_enq
+   }
+
+   io.enq.ready := !full
+
+   private val out = ram(deq_ptr.value)
+   io.deq.valid := deq_ram_valid && valids(deq_ptr.value) && !IsKilledByBranch(io.brinfo, out.uop)
+   io.deq.bits := out
+   io.deq.bits.uop.br_mask := GetNewBrMask(io.brinfo, brmasks(deq_ptr.value))
+
+   if(DEBUG_PRINTF_HFPU){
+      printf("In-Queue-------------------------------------------------------\n")
+      printf("queue-io.feedback=[%x]    do_enq=[%d]    enq_ptr.value=[%d]    do_deq=[%d]    deq_ptr.value=[%d]\n",
+              io.feedback,              do_enq.asUInt, enq_ptr.value,        do_deq.asUInt, deq_ptr.value)
+      printf("In-Queue-------------------------------------------------------\n")
+   }
+
+   // For flow queue behavior.
+   //when (io.empty)
+   //{
+   //   io.deq.valid := io.enq.valid //&& !IsKilledByBranch(io.brinfo, io.enq.bits.uop)
+   //   io.deq.bits := io.enq.bits
+   //   io.deq.bits.uop.br_mask := GetNewBrMask(io.brinfo, io.enq.bits.uop)
+
+   //   do_deq := false.B
+   //   when (io.deq.ready) { do_enq := false.B }
+   //}
+
+   private val ptr_diff = enq_ptr.value - deq_ptr.value
+   if (isPow2(entries)) {
+      io.count := Cat(maybe_full && ptr_match, ptr_diff)
+   } else {
+      io.count := Mux(ptr_match,
+                     Mux(maybe_full,
+                        entries.asUInt, 0.U),
+                     Mux(deq_ptr.value > enq_ptr.value,
+                        entries.asUInt + ptr_diff, ptr_diff))
+   }
+}
+
 
 // Assumption: enq.valid only high if not killed by branch (so don't check IsKilled on io.enq).
 class QueueForMicroOpWithData(entries: Int, data_width: Int)(implicit p: config.Parameters) extends BoomModule()(p)
