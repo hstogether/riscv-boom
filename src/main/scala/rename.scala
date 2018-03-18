@@ -63,7 +63,7 @@ class RenameStageIO(
    // issue stage (fast wakeup)
    val int_wakeups = Vec(num_int_wb_ports, Valid(new ExeUnitResp(xLen))).flip
    val fp_wakeups = Vec(num_fp_wb_ports, Valid(new ExeUnitResp(fLen+1))).flip
-   val hfp_wakeups = Vec(num_hfp_wb_ports, Valid(new ExeUnitResp(fLen+1))).flip
+   val hfp_wakeups = Vec(num_hfp_wb_ports, Valid(new ExeUnitResp(hfLen+hfLen/16))).flip
 
    // commit stage
    val com_valids = Vec(pl_width, Bool()).asInput

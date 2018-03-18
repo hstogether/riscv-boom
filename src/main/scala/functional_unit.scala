@@ -686,13 +686,8 @@ class HFPUUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    num_stages = p(tile.TileKey).core.hfpu.get.hfmaLatency,
    num_bypass_stages = 0,
    earliest_bypass_stage = 0,
-   data_width = 65)(p)
+   data_width = 68)(p)
 {
-   if(DEBUG_PRINTF_HFPU_PATH){
-      printf("==========[Come into HFPUUnit]==========\n")
-      printf("==========[New a HFPU()]==========\n")
-   }
-
    val hfpu = Module(new HFPU())
    hfpu.io.req <> io.req
    hfpu.io.req.bits.fcsr_rm := io.fcsr_rm
@@ -765,14 +760,14 @@ class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    num_stages = p(BoomKey).intToFpLatency, // TODO: Using intToHfpLatency -- Jecy
    num_bypass_stages = 0,
    earliest_bypass_stage = 0,
-   data_width = 65)(p)
+   data_width = 68)(p)
 {
    val hfp_decoder = Module(new UOPCodeHFPUDecoder) // TODO use a simpler decoder
    val io_req = io.req.bits
    hfp_decoder.io.uopc := io_req.uop.uopc
    val hfp_ctrl = hfp_decoder.io.sigs
    val hfp_rm = Mux(ImmGenRm(io_req.uop.imm_packed) === Bits(7), io.fcsr_rm, ImmGenRm(io_req.uop.imm_packed))
-   val req = Wire(new tile.FPInput)
+   val req = Wire(new tile.HFPInput)
    req := hfp_ctrl
    req.rm := hfp_rm
    req.in1 := io_req.rs1_data
@@ -809,14 +804,14 @@ class FPToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    num_stages = p(BoomKey).fpToHfpLatency, // TODO: using fpToHfpLatency -- Jecy
    num_bypass_stages = 0,
    earliest_bypass_stage = 0,
-   data_width = 65)(p)
+   data_width = 68)(p)
 {
    val hfp_decoder = Module(new UOPCodeHFPUDecoder) // TODO use a simpler decoder
    val io_req = io.req.bits
    hfp_decoder.io.uopc := io_req.uop.uopc
    val hfp_ctrl = hfp_decoder.io.sigs
    val hfp_rm = Mux(ImmGenRm(io_req.uop.imm_packed) === Bits(7), io.fcsr_rm, ImmGenRm(io_req.uop.imm_packed))
-   val req = Wire(new tile.FPInput)
+   val req = Wire(new tile.HFPInput)
    req := hfp_ctrl
    req.rm := hfp_rm
    req.in1 := io_req.rs1_data

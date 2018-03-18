@@ -484,7 +484,7 @@ class HFPUExeUnit(
       num_rf_read_ports = 3,
       num_rf_write_ports = 2, // one for FRF, oen for IRF
       num_bypass_stages = 0,
-      data_width = 65,
+      data_width = 68,
       bypassable = false,
       has_alu  = false,
       has_hfpu  = has_hfpu,
@@ -492,10 +492,6 @@ class HFPUExeUnit(
       has_hfpiu = has_hfpiu,
       has_hfpfpu = has_hfpfpu)(p)
 {
-   if(DEBUG_PRINTF_HFPU_PATH){
-      printf("==========[Come into HFPUExeUnit]==========\n")
-   }
-
    println ("     ExeUnit--")
    if (has_hfpu) println ("       - HFPU (Latency: " + hfmaLatency + ")")
    if (has_hfdiv) println ("       - HFDiv/FSqrt")
@@ -533,10 +529,6 @@ class HFPUExeUnit(
    hfpu_resp_fflags.valid := Bool(false)
    if (has_hfpu)
    {
-      if(DEBUG_PRINTF_HFPU_PATH){
-         printf("==========[New a HFPUUnit]==========\n")
-      }
-
       hfpu = Module(new HFPUUnit())
       hfpu.io.req.valid           := io.req.valid &&
                                     (io.req.bits.uop.fu_code_is(FU_HFPU) ||
@@ -571,7 +563,7 @@ class HFPUExeUnit(
    var hfdivsqrt: HFDivSqrtUnit = null
    val hfdiv_resp_val = Wire(init=Bool(false))
    val hfdiv_resp_uop = Wire(new MicroOp())
-   val hfdiv_resp_data = Wire(Bits(width=65))
+   val hfdiv_resp_data = Wire(Bits(width=68))
    val hfdiv_resp_fflags = Wire(new ValidIO(new FFlagsResp()))
    hfdiv_resp_fflags.valid := Bool(false)
    if (has_hfdiv)
@@ -619,19 +611,6 @@ class HFPUExeUnit(
  
 
    // Outputs (Write Port #1) -- FpToInt Queuing Unit -----------------------
-   //if(io.req.bits.uop.fu_code_is(FU_HF2I)==true){
-   //   io.resp(1).bits.writesToFRF = false
-   //} else if(io.req.bits.uop.fu_code_is(FU_HF2F)==true){
-   //   io.resp(1).bits.writesToIRF = false
-   //}else{
-   //   io.resp(1).bits.writesToIRF = false
-   //   io.resp(1).bits.writesToFRF = false
-   //}
-
-   //io.resp(1).bits.writesToIRF = io.req.bits.uop.fu_code_is(FU_HF2I)==true // Why error???
-   //io.resp(1).bits.writesToFRF = io.req.bits.uop.fu_code_is(FU_HF2F)==true
-   //io.resp(1).bits.writesToIRF = if(io.req.bits.uop.fu_code_is(FU_HF2I)==true) true else false
-   //io.resp(1).bits.writesToFRF = if(io.req.bits.uop.fu_code_is(FU_HF2F)==true) true else false
 
    if(DEBUG_PRINTF_HFPU){
       printf("io.resp[0].bits.writesToFRF=[%d]    io.resp[0].bits.writesToIRF=[%d]    io.resp[1].bits.writesToFRF=[%d]    io.resp[1].bits.writesToIRF=[%d]\n",
@@ -647,9 +626,6 @@ class HFPUExeUnit(
 
    // buffer up results since we share write-port on integer regfile. and HFP regfile
    val queue = Module(new QueueForMicroOpWithDataLwl(entries = dfmaLatency + 6, data_width)) // TODO being overly conservative
-   //val wback_resp_valid      = Reg(Bits(0,10))
-   //wbac_resp
-   //val hfpu_io_resp_valid   := hfpu.io.resp.valid || (io.feedback =/= UInt(0))
    queue.io.feedback        := io.feedback =/= UInt(0) 
    queue.io.enq.valid       := hfpu.io.resp.valid && (hfpu.io.resp.bits.uop.fu_code_is(FU_HF2I) ||
                                                       hfpu.io.resp.bits.uop.fu_code_is(FU_HF2F))
@@ -659,16 +635,6 @@ class HFPUExeUnit(
    queue.io.brinfo          := io.brinfo
    queue.io.flush           := io.req.bits.kill
    io.resp(1) <> queue.io.deq
-   //io.resp(1).bits.writesToIRF = queue.io.deq.bits.uop.fu_code == FU_HF2I
-   //io.resp(1).bits.writesToFRF = queue.io.deq.bits.uop.fu_code == FU_HF2F
-
-   // Enter queue only once per cycle -- Jecy
-   //queue.io.enq.valid       := io.feedback =/= UInt(0)
-   //queue.io.enq.bits.uop    := io.resp(1).bits.uop
-   //queue.io.enq.bits.data   := io.resp(1).bits.data
-   //queue.io.enq.bits.fflags := io.resp(1).bits.fflags
-   //queue.io.brinfo          := io.resp(1).brinfo
-   //queue.io.flush           := io.resp(1).flush
 
 
    if(DEBUG_PRINTF_HFPU){
@@ -760,7 +726,7 @@ class FPToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
    num_rf_read_ports = 2,
    num_rf_write_ports = 1,
    num_bypass_stages = 0,
-   data_width = 65,
+   data_width = 68,
    // don't schedule uops from issue-window -- we're hard-hacking the datapath,
    // since the operand data comes from the IRF but writes back to the FRF.
    uses_iss_unit = false)
@@ -779,7 +745,8 @@ class FPToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
    io.bypass <> fphfpu.io.bypass
 
    // buffer up results since we share write-port on integer regfile.
-   val queue = Module(new QueueForMicroOpWithData(entries = p(BoomKey).fpToHfpLatency + 3, data_width)) // TODO being overly conservative
+   val queue = Module(new QueueForMicroOpWithDataLwl(entries = p(BoomKey).fpToHfpLatency + 3, data_width)) // TODO being overly conservative
+   queue.io.feedback        := io.feedback =/= UInt(0)
    queue.io.enq.valid       := fphfpu.io.resp.valid
    queue.io.enq.bits.uop    := fphfpu.io.resp.bits.uop
    queue.io.enq.bits.data   := fphfpu.io.resp.bits.data
@@ -802,7 +769,7 @@ class IntToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
    num_rf_read_ports = 2,
    num_rf_write_ports = 1,
    num_bypass_stages = 0,
-   data_width = 65,
+   data_width = 68,
    // don't schedule uops from issue-window -- we're hard-hacking the datapath,
    // since the operand data comes from the IRF but writes back to the HFRF.
    uses_iss_unit = false)
@@ -821,7 +788,8 @@ class IntToHFPExeUnit(implicit p: Parameters) extends ExecutionUnit(
    io.bypass <> ihfpu.io.bypass
 
    // buffer up results since we share write-port on integer regfile.
-   val queue = Module(new QueueForMicroOpWithData(entries = p(BoomKey).intToHfpLatency + 3, data_width)) // TODO being overly conservative
+   val queue = Module(new QueueForMicroOpWithDataLwl(entries = p(BoomKey).intToHfpLatency + 3, data_width)) // TODO being overly conservative
+   queue.io.feedback        := io.feedback =/= UInt(0)
    queue.io.enq.valid       := ihfpu.io.resp.valid
    queue.io.enq.bits.uop    := ihfpu.io.resp.bits.uop
    queue.io.enq.bits.data   := ihfpu.io.resp.bits.data

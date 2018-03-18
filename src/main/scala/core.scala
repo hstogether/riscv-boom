@@ -794,12 +794,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
    //  TODO : enable tofp
    fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
-   //fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
-   //                                hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
 
    hfp_pipeline.io.fromfp := fp_pipeline.io.tohfp
-   //hfp_pipeline.io.fromfp.valid := fp_pipeline.io.tohfp.valid &&
-   //                                fp_pipeline.io.tohfp.bits.uop.fu_code === FUConstants.FU_F2HF
 
    if(DEBUG_PRINTF_HFPU){
       printf("Core---hfp.fromfp/fpp.fromhfp--------------------------------------------------------------\n")
@@ -858,7 +854,6 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    lsu.io.fp_stdata <> fp_pipeline.io.tosdq
    // TODO: enable hfp_sdq
    lsu.io.hfp_stdata <> hfp_pipeline.io.tosdq
-   //lsu.io.hfp_stdata.valid := Bool(false) // TODO: remove me -- Jecy
 
 
 
@@ -984,14 +979,8 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    assert (ll_wbarb.io.in(0).ready) // never backpressure the memory unit.
    ll_wbarb.io.in(1) <> fp_pipeline.io.toint
    iregfile.io.write_ports(llidx) <> WritePort(ll_wbarb.io.out, IPREG_SZ, xLen)
-   // TODO: enable hfp2i and fix the bug in rob.scala 611
    assert (ll_wbarb.io.in(0).ready) // never backpressure the memory unit.
-   //assert (ll_wbarb.io.in(1).ready) // never backpressure the fp2i unit.
    ll_wbarb.io.in(2) <> hfp_pipeline.io.toint
-   //ll_wbarb.io.in(1).valid := fp_pipeline.io.toint.valid && fp_pipeline.io.toint.bits.uop.dst_rtype === RT_FIX
-   //ll_wbarb.io.in(1).bits := fp_pipeline.io.toint.bits
-   //ll_wbarb.io.in(2).valid := hfp_pipeline.io.toint.valid && hfp_pipeline.io.toint.bits.uop.dst_rtype === RT_FIX
-   //ll_wbarb.io.in(2).bits.uop.uopc := hfp_pipeline.io.toint.bits.uop.uopc
 
    hfp_pipeline.io.int_feedback := Mux(ll_wbarb.io.in(2).valid && (ll_wbarb.io.in(0).valid || ll_wbarb.io.in(1).valid),
                                    UInt(1,10),UInt(0))
@@ -1029,8 +1018,6 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
 
    //TODO enable fromhfp
    fp_pipeline.io.fromhfp := hfp_pipeline.io.tofp
-   //fp_pipeline.io.fromhfp.valid := hfp_pipeline.io.tofp.valid &&
-   //                                hfp_pipeline.io.tofp.bits.uop.dst_rtype === RT_FLT
 
 
 

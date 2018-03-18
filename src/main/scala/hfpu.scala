@@ -99,14 +99,10 @@ class UOPCodeHFPUDecoder extends Module
 
 class HFPU(implicit p: Parameters) extends BoomModule()(p)
 {
-   if(DEBUG_PRINTF_HFPU_PATH){
-      printf("==========[Come into HFPU]==========\n")
-   }
-
    val io = IO(new Bundle
    {
       val req = new ValidIO(new FpuReq).flip
-      val resp = new ValidIO(new ExeUnitResp(65))
+      val resp = new ValidIO(new ExeUnitResp(68))
    })
 
    // all FP units are padded out to the same latency for easy scheduling of the write port
@@ -118,7 +114,7 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
    val hfp_ctrl = hfp_decoder.io.sigs
    val hfp_rm = Mux(ImmGenRm(io_req.uop.imm_packed) === Bits(7), io_req.fcsr_rm, ImmGenRm(io_req.uop.imm_packed)) // 选择舍入方式(111寄存器，其他指令中)
 
-   val req = Wire(new tile.FPInput)
+   val req = Wire(new tile.HFPInput)
    req := hfp_ctrl
    req.rm := hfp_rm
    req.in1 := io_req.rs1_data
@@ -129,7 +125,7 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
    req.typ := ImmGenTyp(io_req.uop.imm_packed) // 获得当前指令的类型，00单精度；01双精度；10半精度
 
 
-   val hfma = Module(new tile.FPUFMAPipe(latency = hfpu_latency, expWidth = 5, sigWidth = 11))
+   val hfma = Module(new tile.HFPUFMAPipe(latency = hfpu_latency, expWidth = 5, sigWidth = 11))
    hfma.io.in.valid := io.req.valid && hfp_ctrl.fma && hfp_ctrl.half && !hfp_ctrl.single
    hfma.io.in.bits := req
 
@@ -139,7 +135,7 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
    hfpiu.io.in.bits := req
    val hfpiu_out = Pipe(Reg(next=hfpiu.io.in.valid && !hfp_ctrl.fastpipe),
                        hfpiu.io.out.bits, hfpu_latency-1)
-   val hfpiu_result  = Wire(new tile.FPResult)
+   val hfpiu_result  = Wire(new tile.HFPResult)
    hfpiu_result.data := hfpiu_out.bits.toint
    hfpiu_result.exc  := hfpiu_out.bits.exc
  
@@ -148,7 +144,7 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
    hfpfu.io.in.bits :=req
    val hfpfu_out = Pipe(Reg(next=hfpfu.io.in.valid && !hfp_ctrl.fastpipe),
                         hfpfu.io.out.bits, hfpu_latency-1)
-   val hfpfu_result = Wire(new tile.FPResult)
+   val hfpfu_result = Wire(new tile.HFPResult)
    hfpfu_result.data := hfpfu_out.bits.data
    hfpfu_result.exc  := hfpfu_out.bits.exc
 

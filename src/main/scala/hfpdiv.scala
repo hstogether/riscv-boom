@@ -71,15 +71,15 @@ class UOPCodeHFDivDecoder extends Module
 class HFDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined = false
                                                                  , num_stages = 1
                                                                  , num_bypass_stages = 0
-                                                                 , data_width = 65)(p)
+                                                                 , data_width = 68)(p)
 {
    //--------------------------------------
    // buffer inputs and upconvert as needed
 
    // provide a one-entry queue to store incoming uops while waiting for the fdiv/fsqrt unit to become available.
    val r_buffer_val = Reg(init = Bool(false))
-   val r_buffer_req = Reg(new FuncUnitReq(data_width=65))
-   val r_buffer_fin = Reg(new tile.FPInput)
+   val r_buffer_req = Reg(new FuncUnitReq(data_width=68))
+   val r_buffer_fin = Reg(new tile.HFPInput)
 
    val fdiv_decoder = Module(new UOPCodeHFDivDecoder)
    fdiv_decoder.io.uopc := io.req.bits.uop.uopc
@@ -112,7 +112,7 @@ class HFDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined 
 
    val r_divsqrt_val = Reg(init = Bool(false))  // inflight uop?
    val r_divsqrt_killed = Reg(Bool())           // has inflight uop been killed?
-   val r_divsqrt_fin = Reg(new tile.FPInput)
+   val r_divsqrt_fin = Reg(new tile.HFPInput)
    val r_divsqrt_uop = Reg(new MicroOp)
 
    // Need to buffer output until RF writeport is available.
@@ -169,7 +169,7 @@ class HFDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined 
       r_out_val := !r_divsqrt_killed && !IsKilledByBranch(io.brinfo, r_divsqrt_uop) && !io.req.bits.kill
       r_out_uop := r_divsqrt_uop
       r_out_uop.br_mask := GetNewBrMask(io.brinfo, r_divsqrt_uop)
-      r_out_wdata_double := Cat(Fill(48,divsqrt.io.out(16)),divsqrt.io.out)
+      r_out_wdata_double := Cat(Fill(51,divsqrt.io.out(16)),divsqrt.io.out)
       r_out_flags_double := divsqrt.io.exceptionFlags
 
       assert (r_divsqrt_val, "[fdiv] a response is being generated for no request.")

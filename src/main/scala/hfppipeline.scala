@@ -45,11 +45,11 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       val ll_wport         = Valid(new ExeUnitResp(fLen+1)).flip // from memory unit
       val fromint          = Valid(new FuncUnitReq(fLen+1)).flip // from integer RF
       val fromfp           = Valid(new FuncUnitReq(fLen+1)).flip // from FP RF
-      val tosdq            = Valid(new MicroOpWithData(fLen))    // to Load/Store Unit
+      val tosdq            = Valid(new MicroOpWithData(hfLen))    // to Load/Store Unit
       val toint            = Decoupled(new ExeUnitResp(xLen))    // to integer RF
       val tofp             = Decoupled(new ExeUnitResp(fLen+1))  // to FP RF
 
-      val wakeups          = Vec(num_wakeup_ports, Valid(new ExeUnitResp(fLen+1)))
+      val wakeups          = Vec(num_wakeup_ports, Valid(new ExeUnitResp(hfLen+hfLen/16)))
       val wb_valids        = Vec(num_wakeup_ports, Bool()).asInput
       val wb_pdsts         = Vec(num_wakeup_ports, UInt(width=fp_preg_sz)).asInput
 
@@ -63,10 +63,6 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    //**********************************
    // construct all of the modules
 
-   if(DEBUG_PRINTF_HFPU_PATH){
-      printf("==========[New a boom.ExecutionUnits(hfpt=true)]==========\n")
-   }
-
    val exe_units        = new boom.ExecutionUnits(hfpu=true)
    val issue_unit       = Module(new IssueUnitCollasping(
                            issueParams.find(_.iqType == IQT_HFP.litValue).get,
@@ -76,7 +72,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
                                  // TODO get rid of -1, as that's a write-port going to IRF
                                  exe_units.withFilter(_.uses_iss_unit).map(e => e.num_rf_write_ports).sum - 1 +
                                     num_ll_ports,
-                                 fLen+1,
+                                 hfLen+hfLen/16,
                                  exe_units.bypassable_write_port_mask
                                  ))
    val fregister_read   = Module(new RegisterRead(
@@ -85,7 +81,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
                            exe_units.withFilter(_.uses_iss_unit).map(_.num_rf_read_ports).sum,
                            exe_units.withFilter(_.uses_iss_unit).map(_.num_rf_read_ports),
                            exe_units.num_total_bypass_ports,
-                           fLen+1))
+                           hfLen+hfLen/16))
 
    require (exe_units.withFilter(_.uses_iss_unit).map(x=>x).length == issue_unit.issue_width)
 
@@ -372,7 +368,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    // **** Writeback Stage ****
    //-------------------------------------------------------------
 
-   val ll_wbarb = Module(new Arbiter(new ExeUnitResp(fLen+1), 3))
+   val ll_wbarb = Module(new Arbiter(new ExeUnitResp(hfLen+hfLen/16), 3))
    val ihfpu_resp = exe_units.ihfpu_unit.io.resp(0)
    val fphfpu_resp = exe_units.fphfpu_unit.io.resp(0)
 
@@ -409,23 +405,26 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
    val typ = io.ll_wport.bits.uop.mem_typ
    val load_single = typ === rocket.MT_W || typ === rocket.MT_WU
-   //val rec_s = hardfloat.recFNFromFN( 8, 24, io.ll_wport.bits.data)
-   //val rec_d = hardfloat.recFNFromFN(11, 53, io.ll_wport.bits.data)
-   val rec_h = hardfloat.recFNFromFN(5, 11, io.ll_wport.bits.data)
+   val rec_h0 = hardfloat.recFNFromFN(5, 11, io.ll_wport.bits.data(15,0))
+   val rec_h1 = hardfloat.recFNFromFN(5, 11, io.ll_wport.bits.data(31,16))
+   val rec_h2 = hardfloat.recFNFromFN(5, 11, io.ll_wport.bits.data(47,32))
+   val rec_h3 = hardfloat.recFNFromFN(5, 11, io.ll_wport.bits.data(63,48))
    //val fp_load_data_recoded = Mux(load_single, Cat(SInt(-1, 32), rec_s), rec_d)
-   val hfp_load_data_recoded = Cat(SInt(-1, 48), rec_h)
+   val hfp_load_data_recoded = Cat(rec_h3,rec_h2,rec_h1,rec_h0)
    ll_wbarb.io.in(0).bits.data := hfp_load_data_recoded
    if(DEBUG_PRINTF_HFPU){
       printf("HfpPipeline--Writeback Stage--ll_wbarb.io.in(0).bits.data\n")
       printf("ll_wbarb.io.in(0).bits.data=[%x]\n",ll_wbarb.io.in(0).bits.data)
       printf("HfpPipeline--Writeback Stage--ll_wbarb.io.in(0).bits.data\n")
    }
+   // TODO: feedback ihfpu_resp and fphfpu_resp
    ll_wbarb.io.in(1) <> ihfpu_resp
    ll_wbarb.io.in(2) <> fphfpu_resp
-   //ll_wbarb.io.in(1).valid := ihfpu_resp.valid && ihfpu_resp.bits.uop.dst_rtype === RT_FHT
-   //ll_wbarb.io.in(1).bits  := ihfpu_resp.bits
-   //ll_wbarb.io.in(2).valid := fphfpu_resp.valid && fphfpu_resp.bits.uop.dst_rtype === RT_FHT
-   //ll_wbarb.io.in(2).bits  := fphfpu_resp.bits
+   exe_units(1).io.feedback := Mux(ll_wbarb.io.in(1).valid && ll_wbarb.io.in(0).valid,
+                                   UInt(4,10),UInt(0))
+   exe_units(2).io.feedback := Mux(ll_wbarb.io.in(2).valid && (ll_wbarb.io.in(1).valid || ll_wbarb.io.in(0).valid),
+                                   UInt(8,10),UInt(0))
+
    assert( !(ll_wbarb.io.in(1).valid) || (ll_wbarb.io.in(1).valid && ll_wbarb.io.in(1).bits.uop.dst_rtype === RT_FHT))
    assert( !(ll_wbarb.io.in(2).valid) || (ll_wbarb.io.in(2).valid && ll_wbarb.io.in(2).bits.uop.dst_rtype === RT_FHT))
    if (regreadLatency > 0) {
@@ -433,9 +432,9 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       // Wakeup signal is sent on cycle S0, write is now delayed until end of S1,
       // but Issue happens on S1 and RegRead doesn't happen until S2 so we're safe.
       // (for regreadlatency >0).
-      fregfile.io.write_ports(0) <> WritePort(RegNext(ll_wbarb.io.out), FPREG_SZ, fLen+1)
+      fregfile.io.write_ports(0) <> WritePort(RegNext(ll_wbarb.io.out), FPREG_SZ, hfLen+hfLen/16)
    } else {
-      fregfile.io.write_ports(0) <> WritePort(ll_wbarb.io.out, FPREG_SZ, fLen+1)
+      fregfile.io.write_ports(0) <> WritePort(ll_wbarb.io.out, FPREG_SZ, hfLen+hfLen/16)
    }
 
    assert (ll_wbarb.io.in(0).ready) // never backpressure the memory unit.
