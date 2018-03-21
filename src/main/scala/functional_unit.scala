@@ -762,6 +762,8 @@ class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    earliest_bypass_stage = 0,
    data_width = 68)(p)
 {
+import tile.FPConstants._
+
    val hfp_decoder = Module(new UOPCodeHFPUDecoder) // TODO use a simpler decoder
    val io_req = io.req.bits
    hfp_decoder.io.uopc := io_req.uop.uopc
@@ -780,14 +782,91 @@ class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    assert (!(io.req.valid && !hfp_ctrl.fromint),
       "[func] Only support fromInt micro-ops.")
 
-   val ihfpu = Module(new tile.IntToHFP(intToFpLatency)) // TODO: Using intToHfpLatency -- Jecy
+   val ihfpu = Module(new tile.IntToHFP(intToFpLatency))
    ihfpu.io.in.valid := io.req.valid
    ihfpu.io.in.bits := req
 
-   io.resp.bits.data              := ihfpu.io.out.bits.data
+   val req_pipe = Pipe(Reg(next=io.req.valid),req,intToFpLatency)   
+
+   val ihfpu0 = Module(new tile.IntToHFP(intToFpLatency))
+   ihfpu0.io.in.valid := io.req.valid
+   ihfpu0.io.in.bits := req
+
+   val ihfpu1 = Module(new tile.IntToHFP(intToFpLatency))
+   ihfpu1.io.in.valid := io.req.valid
+   ihfpu1.io.in.bits := req
+   ihfpu1.io.in.bits.in1 := Cat(Fill(51,req.in1(33)),req.in1(33,17))
+   ihfpu1.io.in.bits.in2 := Cat(Fill(51,req.in2(33)),req.in2(33,17))
+ 
+   val ihfpu2 = Module(new tile.IntToHFP(intToFpLatency))
+   ihfpu2.io.in.valid := io.req.valid
+   ihfpu2.io.in.bits := req
+   ihfpu2.io.in.bits.in1 := Cat(Fill(51,req.in1(50)),req.in1(50,34))
+   ihfpu2.io.in.bits.in2 := Cat(Fill(51,req.in2(50)),req.in2(50,34))
+  
+   val ihfpu3 = Module(new tile.IntToHFP(intToFpLatency))
+   ihfpu3.io.in.valid := io.req.valid
+   ihfpu3.io.in.bits := req
+   ihfpu3.io.in.bits.in1 := Cat(Fill(51,req.in1(67)),req.in1(67,51))
+   ihfpu3.io.in.bits.in2 := Cat(Fill(51,req.in2(67)),req.in2(67,51))
+ 
+   val out0  = ihfpu0.io.out.bits.data
+   val out1  = ihfpu1.io.out.bits.data
+   val out2  = ihfpu2.io.out.bits.data
+   val out3  = ihfpu3.io.out.bits.data
+
+   val exc0  = ihfpu0.io.out.bits.exc
+   val exc1  = ihfpu1.io.out.bits.exc
+   val exc2  = ihfpu2.io.out.bits.exc
+   val exc3  = ihfpu3.io.out.bits.exc
+
+   val maxN  = Cat(Fill(4,Bits(1)),Bits(0),Fill(10,Bits(1)))
+   val zero  = Cat(Fill(57,Bits(0)))
+
+   val data0 = Mux(out0(15,14) === UInt(3) && out0(9,0) === UInt(0), Cat(out0(16), maxN),
+                   Mux(out0(15,13) === UInt(0), Cat(out0(16), zero), out0))
+   val data  = Mux(req_pipe.bits.cmd === FCMD_CVT_FI, Fill(4,data0),
+                   Cat(out3(16,0),out2(16,0),out1(16,0),out0(16,0)))
+   val exc   = Mux(req_pipe.bits.cmd === FCMD_CVT_FI, exc0, 
+                  (exc0 | exc1 | exc2 | exc3))
+   io.resp.bits.data              := data
+   io.resp.bits.fflags.bits.flags := exc
+
+   //io.resp.bits.data              := ihfpu.io.out.bits.data
    io.resp.bits.fflags.valid      := ihfpu.io.out.valid
    io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
-   io.resp.bits.fflags.bits.flags := ihfpu.io.out.bits.exc
+   //io.resp.bits.fflags.bits.flags := ihfpu.io.out.bits.exc
+
+   if(DEBUG_PRINTF_HFPU){
+     printf("IHFPU---------------------------------------------------------------------------------------------\n")
+     printf("ihfpu-io.req.valid=[%d]    io.req.bits.in1=[%x]    io.req.bits.in2=[%x]    io.req.bits.in3=[%x]\n\n",
+                   io.req.valid.asUInt, req.in1,                req.in2,                req.in3)
+
+     printf("ihfpu0-io.in.valid=[%d]    io.in.bits.in1=[%x]     io.in.bits.in2=[%x]     io.in.bits.in3=[%x]\n",
+                  ihfpu0.io.in.valid.asUInt, ihfpu0.io.in.bits.in1, ihfpu0.io.in.bits.in2, ihfpu0.io.in.bits.in3)  
+     printf("ihfpu1-io.in.valid=[%d]    io.in.bits.in1=[%x]     io.in.bits.in2=[%x]     io.in.bits.in3=[%x]\n",
+                  ihfpu1.io.in.valid.asUInt, ihfpu1.io.in.bits.in1, ihfpu1.io.in.bits.in2, ihfpu1.io.in.bits.in3)  
+     printf("ihfpu2-io.in.valid=[%d]    io.in.bits.in1=[%x]     io.in.bits.in2=[%x]     io.in.bits.in3=[%x]\n",
+                  ihfpu2.io.in.valid.asUInt, ihfpu2.io.in.bits.in1, ihfpu2.io.in.bits.in2, ihfpu2.io.in.bits.in3)  
+     printf("ihfpu3-io.in.valid=[%d]    io.in.bits.in1=[%x]     io.in.bits.in2=[%x]     io.in.bits.in3=[%x]\n\n",
+                  ihfpu3.io.in.valid.asUInt, ihfpu3.io.in.bits.in1, ihfpu3.io.in.bits.in2, ihfpu3.io.in.bits.in3)  
+
+     printf("ihfpu0-io.out.bits.valid=[%d]    io.out.bits.data=[%x]    io.out.bits.exc=[%d]\n",
+             ihfpu0.io.out.valid.asUInt,      out0,                    exc0)
+     printf("ihfpu1-io.out.bits.valid=[%d]    io.out.bits.data=[%x]    io.out.bits.exc=[%d]\n",
+             ihfpu1.io.out.valid.asUInt,      out1,                    exc1)
+     printf("ihfpu2-io.out.bits.valid=[%d]    io.out.bits.data=[%x]    io.out.bits.exc=[%d]\n",
+             ihfpu2.io.out.valid.asUInt,      out2,                    exc2)
+     printf("ihfpu3-io.out.bits.valid=[%d]    io.out.bits.data=[%x]    io.out.bits.exc=[%d]\n\n",
+             ihfpu3.io.out.valid.asUInt,      out3,                    exc3)
+
+     printf("req_pipe.bits.cmd===FCMD_CVT_FI=[%d]    data=[%x]    exc=[%d]\n",   
+            (req_pipe.bits.cmd===FCMD_CVT_FI).asUInt, data,       exc)
+     printf("req.cmd=[%x]    req_pipe.bits.cmd=[%x]\n\n",
+             req.cmd,        req_pipe.bits.cmd)
+
+     printf("IHFPU---------------------------------------------------------------------------------------------\n")
+   }
 
    if(DEBUG_PRINTF_HFPU){
       printf("IntToHFPUnit----------------------------------------------------------\n")
@@ -828,7 +907,14 @@ class FPToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    fphfpu.io.in.valid := io.req.valid
    fphfpu.io.in.bits := req
 
-   io.resp.bits.data              := fphfpu.io.out.bits.data
+   val out  = fphfpu.io.out.bits.data
+   val maxN = Cat(Fill(4,Bits(1)),Bits(0),Fill(10,Bits(1)))
+   val zero = Cat(Fill(57,Bits(0)))
+   val data = Mux(out(15,14) === UInt(3) && out(9,0) === UInt(0), Cat(out(16),maxN),
+                  Mux(out(15,13) === UInt(0), Cat(out(16),zero), out(16,0)))
+   
+   //io.resp.bits.data              := fphfpu.io.out.bits.data
+   io.resp.bits.data              := Fill(4,data)
    io.resp.bits.fflags.valid      := fphfpu.io.out.valid
    io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
    io.resp.bits.fflags.bits.flags := fphfpu.io.out.bits.exc

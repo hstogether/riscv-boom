@@ -350,8 +350,8 @@ object HFDecode extends DecodeConstants
              //    |  |  |  |  micro-opcode          func     dst     |       |       |       |  |     |  |  |  |  |  mem    mem     |        |  |  |  |  is unique? (clear pipeline for it)
              //    |  |  |  |  |           iq_type   unit     regtype |       |       |       |  |     |  |  |  |  |  cmd    msk     |        |  |  |  |  |  flush on commit
              //    |  |  |  |  |           |         |        |       |       |       |       |  |     |  |  |  |  |  |      |       |        |  |  |  |  |  |  csr cmd
-   FLH     -> List(Y, N, N, Y, uopLD     , IQT_MEM,  FU_MEM,  RT_FHT, RT_FIX, RT_X  , RT_X  , N, IS_I, Y, N, N, N, N, M_XRD, MSK_H , UInt(0), N, N, N, N, N, N, CSR.N),
-   FSH     -> List(Y, N, N, Y, uopSTA    , IQT_MEM,  FU_MEM,  RT_X  , RT_FIX, RT_FHT, RT_X  , N, IS_S, N, Y, N, N, N, M_XWR, MSK_H , UInt(0), N, N, N, N, N, N, CSR.N),
+   FLH     -> List(Y, N, N, Y, uopLD     , IQT_MEM,  FU_MEM,  RT_FHT, RT_FIX, RT_X  , RT_X  , N, IS_I, Y, N, N, N, N, M_XRD, MSK_D , UInt(0), N, N, N, N, N, N, CSR.N),
+   FSH     -> List(Y, N, N, Y, uopSTA    , IQT_MEM,  FU_MEM,  RT_X  , RT_FIX, RT_FHT, RT_X  , N, IS_S, N, Y, N, N, N, M_XWR, MSK_D , UInt(0), N, N, N, N, N, N, CSR.N),
 
    FCLASS_H-> List(Y, N, N, Y, uopFCLASS_H,IQT_HFP,  FU_HF2I, RT_FIX, RT_FHT, RT_X  , RT_X  , N, IS_I, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
 
