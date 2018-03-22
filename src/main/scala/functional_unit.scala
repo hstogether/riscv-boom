@@ -28,7 +28,7 @@ import uncore.constants.MemoryOpConstants._
 object FUConstants
 {
    // bit mask, since a given execution pipeline may support multiple functional units
-   val FUC_SZ  = 16
+   val FUC_SZ  = 19
    val FU_X    = BitPat.dontCare(FUC_SZ)
    val FU_ALU  = UInt(  1,  FUC_SZ)
    val FU_BRU  = UInt(  2,  FUC_SZ)
@@ -46,6 +46,9 @@ object FUConstants
    val FU_F2HF = UInt(8192, FUC_SZ)
    val FU_HF2I = UInt(16384, FUC_SZ)
    val FU_HF2F = UInt(32768, FUC_SZ)
+   val FU_HFSU = UInt(65536,FUC_SZ)
+   val FU_HPRU = UInt(131072,FUC_SZ)
+   val FU_LSAU = UInt(262144,FUC_SZ)
 }
 import FUConstants._
 

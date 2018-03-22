@@ -318,6 +318,27 @@ trait ScalarOpConstants
    val uopFDIV_H    = UInt(148,UOPC_SZ)
    val uopFSQRT_H   = UInt(149,UOPC_SZ)
 
+   val uopRS1_H     = UInt(154,UOPC_SZ)
+   val uopRS2_H     = UInt(155,UOPC_SZ)
+   val uopRS3_H     = UInt(156,UOPC_SZ)
+   val uopFI0_H     = UInt(157,UOPC_SZ)
+   val uopCR_H      = UInt(158,UOPC_SZ)
+   val uopTR_H      = UInt(159,UOPC_SZ)
+
+   val uopPMAX_H    = UInt(160,UOPC_SZ)
+   val uopPMIN_H    = UInt(161,UOPC_SZ)
+   val uopPSUM_H    = UInt(162,UOPC_SZ)
+   val uopPAVE_H    = UInt(163,UOPC_SZ)
+   val uopRELU_H    = UInt(164,UOPC_SZ)
+
+   val uopLSA0_H    = UInt(165,UOPC_SZ)
+   val uopLSA1_H    = UInt(166,UOPC_SZ)
+   val uopLSA2_H    = UInt(167,UOPC_SZ)
+   val uopLSA3_H    = UInt(168,UOPC_SZ)
+
+   val uopPAL_H     = UInt(169,UOPC_SZ)
+   val uopPAH_H     = UInt(170,UOPC_SZ)
+
    val uopSYSTEM    = UInt(122, UOPC_SZ) // pass uop down the CSR pipeline and let it handle it
 
    // Memory Mask Type Signal

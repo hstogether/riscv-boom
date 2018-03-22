@@ -417,11 +417,52 @@ object HFDivSqrtDecode extends DecodeConstants
              //     |  |  |  |  micro-opcode         func     dst     |       |       |       |  |     |  |  |  |  |  mem    mem     |        |  |  |  |  is unique? (clear pipeline for it)
              //     |  |  |  |  |           iq-type  unit     regtype |       |       |       |  |     |  |  |  |  |  cmd    msk     |        |  |  |  |  |  flush on commit
              //     |  |  |  |  |           |        |        |       |       |       |       |  |     |  |  |  |  |  |      |       |        |  |  |  |  |  |  csr cmd
-   FDIV_H    ->List(Y, Y, N, Y, uopFDIV_H , IQT_HFP, FU_HFDV, RT_FHT, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
-   FSQRT_H   ->List(Y, Y, N, Y, uopFSQRT_H, IQT_HFP, FU_HFDV, RT_FHT, RT_FHT, RT_X  , RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N)
+   FDIV_H    ->List(Y, N, N, Y, uopFDIV_H , IQT_HFP, FU_HFDV, RT_FHT, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   FSQRT_H   ->List(Y, N, N, Y, uopFSQRT_H, IQT_HFP, FU_HFDV, RT_FHT, RT_FHT, RT_X  , RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N)
+   )
+   // TODO
+// scalastyle:on
+}
+
+object HFVecDecode extends DecodeConstants
+{
+// scalastyle:off
+  val table: Array[(BitPat, List[BitPat])] = Array(
+             //                                                                               frs3_en                                wakeup_delay
+             //                                                                               |  imm sel                             |        bypassable (aka, known/fixed latency)
+             //                                                                               |  |     is_load                       |        |  br/jmp
+             //     is val inst?                                      rs1 regtype             |  |     |  is_store                   |        |  |  is jal
+             //     |  is fp inst?                                    |       rs2 type        |  |     |  |  is_amo                  |        |  |  |  allocate_brtag
+             //     |  |  is dst single-prec?                         |       |       rs3 type|  |     |  |  |  is_fence             |        |  |  |  |
+             //     |  |  |  is hfp inst?                             |       |       |       |  |     |  |  |  |  is_fencei         |        |  |  |  |
+             //     |  |  |  |  micro-opcode         func     dst     |       |       |       |  |     |  |  |  |  |  mem    mem     |        |  |  |  |  is unique? (clear pipeline for it)
+             //     |  |  |  |  |           iq-type  unit     regtype |       |       |       |  |     |  |  |  |  |  cmd    msk     |        |  |  |  |  |  flush on commit
+             //     |  |  |  |  |           |        |        |       |       |       |       |  |     |  |  |  |  |  |      |       |        |  |  |  |  |  |  csr cmd
+   RS1_H     ->List(Y, N, N, Y, uopRS1_H,   IQT_HFP, FU_HFSU, RT_FHT, RT_FHT, RT_X  , RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   RS2_H     ->List(Y, N, N, Y, uopRS2_H,   IQT_HFP, FU_HFSU, RT_FHT, RT_FHT, RT_X  , RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   RS3_H     ->List(Y, N, N, Y, uopRS3_H,   IQT_HFP, FU_HFSU, RT_FHT, RT_FHT, RT_X  , RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   FI0_H     ->List(Y, N, N, Y, uopFI0_H,   IQT_HFP, FU_HFSU, RT_FHT, RT_FHT, RT_X  , RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   CR_H      ->List(Y, N, N, Y, uopCR_H,    IQT_HFP, FU_HFSU, RT_FHT, RT_FHT, RT_X  , RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   TR_H      ->List(Y, N, N, Y, uopTR_H,    IQT_HFP, FU_HFSU, RT_FHT, RT_FHT, RT_X  , RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+
+   PMAX_H    ->List(Y, N, N, Y, uopPMAX_H,  IQT_HFP, FU_HPRU, RT_FHT, RT_FHT, RT_X  , RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   PMIN_H    ->List(Y, N, N, Y, uopPMIN_H,  IQT_HFP, FU_HPRU, RT_FHT, RT_FHT, RT_X  , RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   PSUM_H    ->List(Y, N, N, Y, uopPSUM_H,  IQT_HFP, FU_HPRU, RT_FHT, RT_FHT, RT_X  , RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   PAVE_H    ->List(Y, N, N, Y, uopPAVE_H,  IQT_HFP, FU_HPRU, RT_FHT, RT_FHT, RT_X  , RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   RELU_H    ->List(Y, N, N, Y, uopRELU_H,  IQT_HFP, FU_HPRU, RT_FHT, RT_FHT, RT_X  , RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+
+   LSA0_H    ->List(Y, N, N, Y, uopLSA0_H,  IQT_HFP, FU_LSAU, RT_FHT, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   LSA1_H    ->List(Y, N, N, Y, uopLSA1_H,  IQT_HFP, FU_LSAU, RT_FHT, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   LSA2_H    ->List(Y, N, N, Y, uopLSA2_H,  IQT_HFP, FU_LSAU, RT_FHT, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   LSA3_H    ->List(Y, N, N, Y, uopLSA3_H,  IQT_HFP, FU_LSAU, RT_FHT, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+
+   PAL_H     ->List(Y, N, N, Y, uopPAL_H,   IQT_HFP, FU_HFSU, RT_FHT, RT_FHT, RT_FHT, RT_FHT, Y, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   PAH_H     ->List(Y, N, N, Y, uopPAH_H,   IQT_HFP, FU_HFSU, RT_FHT, RT_FHT, RT_FHT, RT_FHT, Y, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N)
    )
 // scalastyle:on
 }
+
+
 
 class DecodeUnitIo(implicit p: Parameters) extends BoomBundle()(p)
 {
@@ -449,6 +490,7 @@ class DecodeUnit(implicit p: Parameters) extends BoomModule()(p)
    if (usingFPU && usingFDivSqrt) decode_table ++= FDivSqrtDecode.table
    if (usingHFPU) decode_table ++= HFDecode.table
    if (usingHFPU && usingHFDivSqrt) decode_table ++= HFDivSqrtDecode.table
+   if (usingHFPU) decode_table ++= HFVecDecode.table
 
    val cs = Wire(new CtrlSigs()).decode(uop.inst, decode_table)
 
