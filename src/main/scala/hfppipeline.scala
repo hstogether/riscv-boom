@@ -22,10 +22,6 @@ import boom.FUConstants._
 
 class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 {
-   if(DEBUG_PRINTF_HFPU_PATH){
-      printf("==========[Come in to HfpPipeline]==========\n")
-   }
-
    val fpIssueParams = issueParams.find(_.iqType == IQT_HFP.litValue).get
    val num_ll_ports = 1 // hard-wired; used by mem port and i2f port.
    val num_wakeup_ports = fpIssueParams.issueWidth + num_ll_ports
@@ -67,7 +63,11 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    val issue_unit       = Module(new IssueUnitCollasping(
                            issueParams.find(_.iqType == IQT_HFP.litValue).get,
                            num_wakeup_ports))
-   val fregfile         = Module(new RegisterFileBehavorial(numFpPhysRegs,
+   //require(exe_units.withFilter(_.uses_iss_unit).map(e => e.num_rf_write_ports).sum - 1 + num_ll_ports == 4)
+   //require(exe_units.withFilter(_.uses_iss_unit).map(e => e.num_rf_write_ports).sum - 1 + num_ll_ports == 3)
+   //require(exe_units.withFilter(_.uses_iss_unit).map(e => e.num_rf_write_ports).sum - 1 + num_ll_ports == 2)
+   //require(exe_units.withFilter(_.uses_iss_unit).map(e => e.num_rf_write_ports).sum - 1 + num_ll_ports == 1)
+   val fregfile         = Module(new RegisterFileBehavorial(numHfpPhysRegs,
                                  exe_units.withFilter(_.uses_iss_unit).map(e => e.num_rf_read_ports).sum,
                                  // TODO get rid of -1, as that's a write-port going to IRF
                                  exe_units.withFilter(_.uses_iss_unit).map(e => e.num_rf_write_ports).sum - 1 +
@@ -333,7 +333,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
 
 
       // TODO HACK only let one FPU issue port issue these.
-      require (w == 0)
+      //require (w == 0)
       when (fregister_read.io.exe_reqs(w).bits.uop.uopc === uopSTD) {
          ex.io.req.valid :=  Bool(false)
       }
@@ -342,11 +342,11 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       io.tosdq.bits.uop := fregister_read.io.exe_reqs(w).bits.uop
       val sdata = fregister_read.io.exe_reqs(w).bits.rs2_data
 
-      //val unrec_s = hardfloat.fNFromRecFN(8, 24, sdata)
-      //val unrec_d = hardfloat.fNFromRecFN(11, 53, sdata)
-      val unrec_h = hardfloat.fNFromRecFN(5, 11, sdata)
-      //val unrec_out = Mux(io.tosdq.bits.uop.fp_single, Cat(Fill(32, unrec_s(31)), unrec_s), unrec_d)
-      val unrec_out = Cat(Fill(48, unrec_h(15)),unrec_h)
+      val unrec0_h = hardfloat.fNFromRecFN(5, 11, sdata(16,0))
+      val unrec1_h = hardfloat.fNFromRecFN(5, 11, sdata(33,17))
+      val unrec2_h = hardfloat.fNFromRecFN(5, 11, sdata(50,34))
+      val unrec3_h = hardfloat.fNFromRecFN(5, 11, sdata(67,51))
+      val unrec_out = Cat(unrec0_h,unrec1_h,unrec2_h,unrec3_h)
 
       io.tosdq.bits.data := unrec_out
    }
@@ -453,27 +453,25 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
          val tofp  = wbresp.bits.uop.dst_rtype === RT_FLT
 
          if (wbresp.bits.writesToIRF || wbresp.bits.writesToFRF) {
-            //if(toint == true){
                io.toint <> wbresp
                assert(!(wbresp.valid && !toint && !tofp))
                assert(!toint_found) // only support one toint connector
                toint_found = true
-            //} else {
                io.tofp <> wbresp
                assert(!(wbresp.valid && !tofp && !toint))
                assert(!tofp_found)
                tofp_found=true
-            //}
-            io.toint.valid := wbresp.valid && toint
-            io.tofp.valid  := wbresp.valid && tofp
-            if(DEBUG_PRINTF_HFPU){
-               printf("HfpPipeline--Writeback Stage--io.toint/io.tofp------------------------------------------------------------------------------------------\n")
-               printf("     io.toint.valid=[%d]    io.toint.bits.uop.uopc=[%d]    io.toint.bits.uop.dst_rtype=[%d]\n",
-                            io.toint.valid.asUInt, io.toint.bits.uop.uopc,        io.toint.bits.uop.dst_rtype)
-               printf("     io.tofp.valid=[%d]    io.tofp.bits.uop.uopc=[%d]     io.tofp.bits.uop.dst_rtype=[%d]\n",
-                            io.tofp.valid.asUInt, io.tofp.bits.uop.uopc,         io.tofp.bits.uop.dst_rtype)
-               printf("HfpPipeline--Writeback Stage--io.toint/io.tofp------------------------------------------------------------------------------------------\n")
-            }
+
+              io.toint.valid := wbresp.valid && toint
+              io.tofp.valid  := wbresp.valid && tofp
+              if(DEBUG_PRINTF_HFPU){
+                 printf("HfpPipeline--Writeback Stage--io.toint/io.tofp------------------------------------------------------------------------------------------\n")
+                 printf("     io.toint.valid=[%d]    io.toint.bits.uop.uopc=[%d]    io.toint.bits.uop.dst_rtype=[%d]\n",
+                              io.toint.valid.asUInt, io.toint.bits.uop.uopc,        io.toint.bits.uop.dst_rtype)
+                 printf("     io.tofp.valid=[%d]    io.tofp.bits.uop.uopc=[%d]     io.tofp.bits.uop.dst_rtype=[%d]\n",
+                              io.tofp.valid.asUInt, io.tofp.bits.uop.uopc,         io.tofp.bits.uop.dst_rtype)
+                 printf("HfpPipeline--Writeback Stage--io.toint/io.tofp------------------------------------------------------------------------------------------\n")
+              }
          } else if (eu.has_ihfpu || eu.has_fphfpu) {
             // share with ll unit
          } else {

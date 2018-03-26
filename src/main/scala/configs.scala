@@ -40,7 +40,7 @@ class DefaultBoomConfig extends Config((site, here, up) => {
          IssueParams(issueWidth=1, numEntries=20, iqType=IQT_MEM.litValue),
          IssueParams(issueWidth=2, numEntries=20, iqType=IQT_INT.litValue),
          IssueParams(issueWidth=1, numEntries=20, iqType=IQT_FP.litValue),
-         IssueParams(issueWidth=1, numEntries=20, iqType=IQT_HFP.litValue)),
+         IssueParams(issueWidth=2, numEntries=20, iqType=IQT_HFP.litValue)),
       numIntPhysRegisters = 100,
       numFpPhysRegisters = 64,
       numHfpPhysRegisters = 64,

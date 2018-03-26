@@ -62,10 +62,6 @@ class BoomCore(implicit p: Parameters, edge: uncore.tilelink2.TLEdgeOut) extends
    }
    
    if (usingHFPU) {
-      //assert(DEBUG_PRINTF_HFPU_PATH,"No HFPU Debug Messages.")
-      if(DEBUG_PRINTF_HFPU_PATH){
-         printf("==========[new a HfpPipeline()]==========\n")
-      }
       hfp_pipeline      = Module(new HfpPipeline())
    }
    

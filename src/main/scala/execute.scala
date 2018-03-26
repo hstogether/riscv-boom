@@ -96,6 +96,7 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
                             , val has_hfpu      : Boolean       = false
                             , val has_hfdiv     : Boolean       = false
                             , val has_hfpiu     : Boolean       = false
+                            , val has_hfvu      : Boolean       = false
                             )(implicit p: Parameters) extends BoomModule()(p)
 {
    val io = IO(new ExecutionUnitIO(num_rf_read_ports, num_rf_write_ports
@@ -111,7 +112,7 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
    def usesFRF       : Boolean = (has_fpu || has_fdiv) && !(has_alu || has_mul)
    def usesIRF       : Boolean = !(has_fpu || has_fdiv || has_hfpu) && (has_alu || has_mul || is_mem_unit || has_ifpu || has_ihfpu)
 
-   require ((has_fpu || has_fdiv || has_hfpu || has_fphfpu) ^ (has_alu || has_mul || is_mem_unit || has_ifpu || has_ihfpu),
+   require ((has_fpu || has_fdiv || has_hfpu || has_fphfpu  || has_hfvu) ^ (has_alu || has_mul || is_mem_unit || has_ifpu || has_ihfpu),
       "[execute] we no longer support mixing FP/HFP and Integer functional units in the same exe unit.")
 
    def supportedFuncUnits =
@@ -128,7 +129,8 @@ abstract class ExecutionUnit(val num_rf_read_ports: Int
          ihfpu = has_ihfpu,
          fphfpu = has_fphfpu,
          hfdiv = has_hfdiv,
-         hfpu = has_hfpu)
+         hfpu = has_hfpu,
+         hfvu = has_hfvu)
    }
 }
 
@@ -471,6 +473,89 @@ class FPUExeUnit(
 
    assert (queue.io.enq.ready) // If this backs up, we've miscalculated the size of the queue.
 }
+
+// HFPU-only unit, with optional second write-port for ToInt micro-ops.
+class HFVUExeUnit(
+   has_hfvu  : Boolean = true
+   )
+   (implicit p: Parameters)
+   extends ExecutionUnit(
+      num_rf_read_ports = 3,
+      num_rf_write_ports = 1,
+      num_bypass_stages = 0,
+      data_width = 68,
+      bypassable = false,
+      has_hfvu = has_hfvu)(p)
+{
+   println ("     ExeUnit--")
+   if (has_hfvu) println ("       - HFVU (Latency: " + hfmaLatency + ")")
+
+   // The Functional Units --------------------
+   val fu_units = ArrayBuffer[FunctionalUnit]()
+
+   io.fu_types := Mux(Bool(has_hfvu), FU_HFVU, Bits(0))
+
+   if(DEBUG_PRINTF_HFPU){
+       printf("HFVUExeUnit----------------------------------------------\n")
+       printf("io.fu_types=[%x]\n",io.fu_types)
+       printf("HFVUExeUnit----------------------------------------------\n")
+   }
+
+
+   io.resp(0).bits.writesToIRF = false
+   io.resp(0).bits.writesToFRF = false
+
+   // HFPU Unit -----------------------
+   var hfvu: HFVUUnit = null
+   val hfvu_resp_val = Wire(init=Bool(false))  // TODO: Where is the output?  -- Jecy
+   val hfvu_resp_fflags = Wire(new ValidIO(new FFlagsResp()))  // TODO: Where is the output? -- Jecy
+   hfvu_resp_fflags.valid := Bool(false)
+   if (has_hfvu)
+   {
+      hfvu = Module(new HFVUUnit())
+      hfvu.io.req.valid           := io.req.valid && io.req.bits.uop.fu_code_is(FU_HFVU)
+      hfvu.io.req.bits.uop        := io.req.bits.uop
+      hfvu.io.req.bits.rs1_data   := io.req.bits.rs1_data
+      hfvu.io.req.bits.rs2_data   := io.req.bits.rs2_data
+      hfvu.io.req.bits.rs3_data   := io.req.bits.rs3_data
+      hfvu.io.req.bits.kill       := io.req.bits.kill
+      hfvu.io.fcsr_rm             := io.fcsr_rm
+      hfvu.io.brinfo <> io.brinfo
+      hfvu_resp_val := hfvu.io.resp.valid
+      hfvu_resp_fflags := hfvu.io.resp.bits.fflags
+      fu_units += hfvu
+
+      if(DEBUG_PRINTF_HFPU){
+         printf("HFVUExeUnit-Start--------------------------------------------------------------------------------------------\n")
+         printf("io.req.rs1=[%x]    io.req.rs2=[%x]    io.req.rs3=[%x]\n",
+                 io.req.bits.rs1_data,io.req.bits.rs2_data,io.req.bits.rs3_data);
+         printf("hfvu.io.req.valid=[%d]    hfvu.io.req.rs1=[%x]    hfvu.io.req.rs2=[%x]    hfvu.io.req.rs3=[%x]\n",
+                 hfvu.io.req.valid.asUInt, hfvu.io.req.bits.rs1_data,hfvu.io.req.bits.rs2_data,hfvu.io.req.bits.rs3_data);
+         printf("hfvu.io.resp.valid=[%d]   hfvu.io.resp.bits.data=[%x]\n",hfvu.io.resp.valid.asUInt,hfvu.io.resp.bits.data)
+         printf("HFVUExeUnit-End--------------------------------------------------------------------------------------------\n")
+      }
+   }
+
+   // Outputs (Write Port #0) -- FpToInt Queuing Unit -----------------------
+   io.resp(0).valid    := fu_units.map(_.io.resp.valid).reduce(_|_) &&
+                          hfvu.io.resp.valid && hfvu.io.resp.bits.uop.fu_code_is(FU_HFVU)
+   io.resp(0).bits.uop := new MicroOp().fromBits(
+                           PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.uop.asUInt))))
+   io.resp(0).bits.data:= PriorityMux(fu_units.map(f => (f.io.resp.valid, f.io.resp.bits.data.asUInt))).asUInt
+   io.resp(0).bits.fflags := hfvu_resp_fflags
+
+   if(DEBUG_PRINTF_HFPU){
+      printf("HFVUExeUnit-Start--------------------------------------------------------------------------------------------\n")
+      printf("hfvu_resp_val=[%d]    fu_units.map(_.io.resp.valid).reduce(_|_)=[%d]\n",
+              hfvu_resp_val.asUInt, fu_units.map(_.io.resp.valid).reduce(_|_).asUInt)
+      printf("io.resp[0].uop.uopc=[%d]    io.resp[0].uop.dst_rtype=[%d]    io.resp[0].data=[%x]    io.resp[0].valid=[%d]\n",
+              io.resp(0).bits.uop.uopc,   io.resp(0).bits.uop.dst_rtype,   io.resp(0).bits.data,   io.resp(0).valid.asUInt);
+      printf("HFVUExeUnit-End--------------------------------------------------------------------------------------------\n")
+   }
+}
+
+
+
 
 // HFPU-only unit, with optional second write-port for ToInt micro-ops.
 class HFPUExeUnit(

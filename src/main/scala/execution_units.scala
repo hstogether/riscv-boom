@@ -134,16 +134,16 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
          val is_last = w == (int_width-2)
          exe_units += Module(new ALUExeUnit(has_ifpu = is_last, has_ihfpu = is_last))
       }
-      //exe_units += Module(new ALUExeUnit(has_ihfpu=true))
    } else if(hfpu && !fpu){
       require (usingHFPU)
       val hfp_width = issueParams.find(_.iqType == IQT_HFP.litValue).get.issueWidth
-      require (hfp_width <= 1) // TODO hacks to fix include uopSTD_fp needing a proper func unit.
-      for (w <- 0 until hfp_width) {
-         exe_units += Module(new HFPUExeUnit(has_hfpu = true,
-                                             has_hfdiv = usingHFDivSqrt && (w==0),
-                                             has_hfpiu = (w==0),
-                                             has_hfpfpu = usingFPU && (w==0)))
+      require (hfp_width <= 2) // TODO hacks to fix include uopSTD_fp needing a proper func unit.
+      exe_units += Module(new HFPUExeUnit(has_hfpu = true,
+                                          has_hfdiv = usingHFDivSqrt,
+                                          has_hfpiu = true,
+                                          has_hfpfpu = usingFPU))
+      for (w <- 0 until hfp_width - 1) {
+         exe_units += Module(new HFVUExeUnit()) 
       }
       exe_units += Module(new IntToHFPExeUnit())
       exe_units += Module(new FPToHFPExeUnit())
@@ -173,10 +173,10 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
    val num_rf_read_ports = exe_units.map(_.num_rf_read_ports).reduce[Int](_+_)
    val num_rf_write_ports = exe_units.map(_.num_rf_write_ports).reduce[Int](_+_)
    val num_total_bypass_ports = exe_units.withFilter(_.isBypassable).map(_.numBypassPorts).foldLeft(0)(_+_)
-//   val num_fast_wakeup_ports = exe_units.count(_.isBypassable)
+   // val num_fast_wakeup_ports = exe_units.count(_.isBypassable)
    // TODO reduce the number of slow wakeup ports - currently have every write-port also be a slow-wakeup-port.
    // +1 is for FP->Int moves. TODO HACK move toint to share the mem port.
-//   val num_slow_wakeup_ports = num_rf_write_ports + 1
+   // val num_slow_wakeup_ports = num_rf_write_ports + 1
    // The slow write ports to the regfile are variable latency, and thus can't be bypassed.
    // val num_slow_wakeup_ports = exe_units.map(_.num_variable_write_ports).reduce[Int](_+_)
 
@@ -185,7 +185,7 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
 
    require (!(fpu && hfpu))
    val bypassable_write_port_mask = {
-      if (fpu || hfpu)
+      if (fpu)
       {
          // NOTE: hack for the long latency load pipe which is write_port(0) and doesn't support bypassing.
          val mask = Seq(false) ++ exe_units.withFilter(_.uses_iss_unit).map(_.isBypassable)
@@ -193,11 +193,22 @@ class ExecutionUnits(fpu: Boolean = false, hfpu: Boolean = false)(implicit val p
          //require(exe_units.length == 2)
          //require(mask.length == 2)
          mask
+      } else if (hfpu)
+      {
+         // NOTE: hack for the long latency load pipe which is write_port(0) and doesn't support bypassing.
+         val hfp_width = issueParams.find(_.iqType == IQT_FP.litValue).get.issueWidth
+         val mask = if(hfp_width > 1) Seq(false) ++ exe_units.withFilter(_.uses_iss_unit).map(_.isBypassable) ++ Seq(false)
+                    else Seq(false) ++ exe_units.withFilter(_.uses_iss_unit).map(_.isBypassable)
+         require (!mask.reduce(_||_)) // don't support any bypassing in FP
+         //require(exe_units.length == 3)
+         //require(exe_units.length == 2)
+         //require(mask.length == 3)
+         // require(mask.length == 2)
+         mask
       }
-      else
+     else
       {
          exe_units.withFilter(_.usesIRF).map(_.isBypassable)
       }
    }
-
 }

@@ -18,7 +18,7 @@ case class BoomCoreParams(
          IssueParams(issueWidth=1, numEntries=16, iqType=IQT_MEM.litValue),
          IssueParams(issueWidth=2, numEntries=16, iqType=IQT_INT.litValue),
          IssueParams(issueWidth=1, numEntries=16, iqType=IQT_FP.litValue),
-         IssueParams(issueWidth=1, numEntries=16, iqType=IQT_HFP.litValue)),
+         IssueParams(issueWidth=2, numEntries=16, iqType=IQT_HFP.litValue)),
    numLsuEntries: Int = 8,
    numIntPhysRegisters: Int = 96,
    numFpPhysRegisters: Int = 64,

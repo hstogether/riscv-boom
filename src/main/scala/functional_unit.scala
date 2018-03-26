@@ -28,7 +28,7 @@ import uncore.constants.MemoryOpConstants._
 object FUConstants
 {
    // bit mask, since a given execution pipeline may support multiple functional units
-   val FUC_SZ  = 19
+   val FUC_SZ  = 17
    val FU_X    = BitPat.dontCare(FUC_SZ)
    val FU_ALU  = UInt(  1,  FUC_SZ)
    val FU_BRU  = UInt(  2,  FUC_SZ)
@@ -46,9 +46,7 @@ object FUConstants
    val FU_F2HF = UInt(8192, FUC_SZ)
    val FU_HF2I = UInt(16384, FUC_SZ)
    val FU_HF2F = UInt(32768, FUC_SZ)
-   val FU_HFSU = UInt(65536,FUC_SZ)
-   val FU_HPRU = UInt(131072,FUC_SZ)
-   val FU_LSAU = UInt(262144,FUC_SZ)
+   val FU_HFVU = UInt(65536, FUC_SZ)
 }
 import FUConstants._
 
@@ -65,7 +63,8 @@ class SupportedFuncUnits(
    val ihfpu: Boolean= false,
    val fphfpu:Boolean= false,
    val hfdiv: Boolean = false,
-   val hfpu: Boolean = false)
+   val hfpu: Boolean = false,
+   val hfvu: Boolean = false)
 {
 }
 
@@ -712,8 +711,38 @@ class HFPUUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
               io.resp.bits.data, io.resp.bits.fflags.bits.flags, io.resp.bits.fflags.valid.asUInt);
       printf("HFPUUnit-End--------------------------------------------------------------------------------------\n")
    }
+}
 
+// currently, bypassing is unsupported!
+// All HFP instructions are padded out to the max latency unit for easy
+// write-port scheduling.
+class HFVUUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
+   num_stages = p(tile.TileKey).core.hfpu.get.hfmaLatency,
+   num_bypass_stages = 0,
+   earliest_bypass_stage = 0,
+   data_width = 68)(p)
+{
+   val hfvu = Module(new HFVU())
+   hfvu.io.req <> io.req
+   hfvu.io.req.bits.fcsr_rm := io.fcsr_rm
 
+   io.resp.bits.data              := hfvu.io.resp.bits.data
+   io.resp.bits.fflags.valid      := hfvu.io.resp.bits.fflags.valid
+   io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
+   io.resp.bits.fflags.bits.flags := hfvu.io.resp.bits.fflags.bits.flags // kill me now
+
+   if(DEBUG_PRINTF_HFPU){
+      printf("HFVUUnit-Start------------------------------------------------------------------------------------\n")
+      printf("io.req.rs1=[%x]    io.req.rs2=[%x]    io.req.rs3=[%x]\n",
+              io.req.bits.rs1_data,io.req.bits.rs2_data,io.req.bits.rs3_data);
+      printf("hfvu.io.req.rs1=[%x]    hfvu.io.req.rs2=[%x]    hfvu.io.req.rs3=[%x]\n",
+              hfvu.io.req.bits.rs1_data,hfvu.io.req.bits.rs2_data,hfvu.io.req.bits.rs3_data);
+      printf("hfvu.io.resp.data=[%x]    hfvu.io.resp.valid=[%d]\n",
+              hfvu.io.resp.bits.data,hfvu.io.resp.bits.fflags.valid.asUInt);
+      printf("io.resp.data=[%x][%d]    io.resp.valid=[%d]\n",
+              io.resp.bits.data, io.resp.bits.fflags.bits.flags, io.resp.bits.fflags.valid.asUInt);
+      printf("HFVUUnit-End--------------------------------------------------------------------------------------\n")
+   }
 }
 
 class IntToFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(

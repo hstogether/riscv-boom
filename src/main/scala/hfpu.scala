@@ -76,6 +76,7 @@ class UOPCodeHFPUDecoder extends Module
 
       BitPat(uopFMIN_H)   -> List(FCMD_MINMAX, X,X,Y,Y,N, N,N,N,Y,N,N,N,N,N,N,Y,N, N,N,N,Y),
       BitPat(uopFMAX_H)   -> List(FCMD_MINMAX, X,X,Y,Y,N, N,N,N,Y,N,N,N,N,N,N,Y,N, N,N,N,Y),
+      BitPat(uopRELU_H)   -> List(FCMD_MINMAX, X,X,Y,N,N, N,N,N,Y,N,N,N,N,N,N,Y,N, N,N,N,Y),
 
       BitPat(uopFADD_H)   -> List(FCMD_ADD,    X,X,Y,Y,N, N,Y,N,Y,N,N,N,N,N,N,N,Y, N,N,Y,Y),
       BitPat(uopFSUB_H)   -> List(FCMD_SUB,    X,X,Y,Y,N, N,Y,N,Y,N,N,N,N,N,N,N,Y, N,N,Y,Y),
@@ -84,7 +85,13 @@ class UOPCodeHFPUDecoder extends Module
       BitPat(uopFMADD_H)  -> List(FCMD_MADD,   X,X,Y,Y,Y, N,N,N,Y,N,N,N,N,N,N,N,Y, N,N,Y,Y),
       BitPat(uopFMSUB_H)  -> List(FCMD_MSUB,   X,X,Y,Y,Y, N,N,N,Y,N,N,N,N,N,N,N,Y, N,N,Y,Y),
       BitPat(uopFNMADD_H) -> List(FCMD_NMADD,  X,X,Y,Y,Y, N,N,N,Y,N,N,N,N,N,N,N,Y, N,N,Y,Y),
-      BitPat(uopFNMSUB_H) -> List(FCMD_NMSUB,  X,X,Y,Y,Y, N,N,N,Y,N,N,N,N,N,N,N,Y, N,N,Y,Y)
+      BitPat(uopFNMSUB_H) -> List(FCMD_NMSUB,  X,X,Y,Y,Y, N,N,N,Y,N,N,N,N,N,N,N,Y, N,N,Y,Y),
+
+      BitPat(uopLSA0_H)   -> List(FCMD_ADD,    X,X,Y,Y,N, N,Y,N,Y,N,N,N,N,N,N,N,Y, N,N,Y,Y),
+      BitPat(uopLSA1_H)   -> List(FCMD_ADD,    X,X,Y,Y,N, N,Y,N,Y,N,N,N,N,N,N,N,Y, N,N,Y,Y),
+      BitPat(uopLSA2_H)   -> List(FCMD_ADD,    X,X,Y,Y,N, N,Y,N,Y,N,N,N,N,N,N,N,Y, N,N,Y,Y),
+      BitPat(uopLSA3_H)   -> List(FCMD_ADD,    X,X,Y,Y,N, N,Y,N,Y,N,N,N,N,N,N,N,Y, N,N,Y,Y)
+
       )
 
    val decoder = rocket.DecodeLogic(io.uopc, default, table)
@@ -117,9 +124,13 @@ class HFPU(implicit p: Parameters) extends BoomModule()(p)
    val req = Wire(new tile.HFPInput)
    req := hfp_ctrl
    req.rm := hfp_rm
-   req.in1 := io_req.rs1_data
    req.in2 := io_req.rs2_data
    req.in3 := io_req.rs3_data
+   req.in1 := Mux(io_req.uop.uopc === uopLSA1_H, Cat(io_req.rs1_data(50,0), Fill(17,UInt(0))),
+              Mux(io_req.uop.uopc === uopLSA2_H, Cat(io_req.rs1_data(33,0), Fill(34,UInt(0))),
+              Mux(io_req.uop.uopc === uopLSA3_H, Cat(io_req.rs1_data(16,0), Fill(51,UInt(0))),
+                  io_req.rs1_data)))
+   when (hfp_ctrl.cmd === FCMD_MINMAX && !hfp_ctrl.ren2 ) { req.in2 := UInt(0) }
    when (hfp_ctrl.swap23) { req.in3 := io_req.rs2_data }
 
    req.typ := ImmGenTyp(io_req.uop.imm_packed) // 获得当前指令的类型，00单精度；01双精度；10半精度
@@ -463,49 +474,4 @@ class HFPMU(implicit p: Parameters) extends BoomModule()(p)
 
 }
 
-//abstract class SEMA(implicit p: Parameters) extends BoomModule()(p)
-//{
-//   val rm = Bits(3)
-//   val in0 = Bits(17)
-//   val in1 = Bits(17)
-//   val in2 = Bits(17)
-//   val in3 = Bits(17)
-//
-//   val out0 =Bits(17)
-//   val out1 =Bits(17)
-//   val out2 =Bits(17)
-//   val out3 =Bits(17)
-//
-//   val sel0 = rm === UInt(0)
-//   val sel1 = rm === UInt(1)
-//   val sel2 = rm === UInt(2)
-//   val sel3 = rm === UInt(3)
-//   val sel4 = rm === UInt(4)
-//   val sel5 = rm === UInt(5)
-//   val sel6 = rm === UInt(6)
-//   val sel7 = rm === UInt(7)
-//
-//   when(UInt(0)){
-//      out0 = Mux(sel0 || sel4, in0,
-//             Mux(sel1 || sel5, in1,
-//             Mux(sel2 || sel6, in2,
-//                 in3)))
-//      out1 = Mux(sel3 || sel4, in0,
-//             Mux(sel0 || sel5, in1,
-//             Mux(sel1 || sel6, in2,
-//                 in3)))
-//      out2 = Mux(sel2 || sel4, in0,
-//             Mux(sel3 || sel5, in1,
-//             Mux(sel0 || sel6, in2,
-//                 in3)))
-//      out3 = Mux(sel1 || sel4, in0,
-//             Mux(sel2 || sel5, in1,
-//             Mux(sel3 || sel6, in2,
-//                 in3)))
-//   }
-//   when(UInt(1)){
-//      out0 = Mux(
-//   }
-//
-//}
 }
