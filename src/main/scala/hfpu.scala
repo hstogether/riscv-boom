@@ -104,11 +104,19 @@ class UOPCodeHFPUDecoder extends Module
    sigs zip decoder map {case(s,d) => s := d}
 }
 
+class HfpuReq()(implicit p: Parameters) extends BoomBundle()(p)
+{
+   val uop      = new MicroOp()
+   val rs1_data = Bits(width = 68)
+   val rs2_data = Bits(width = 68)
+   val rs3_data = Bits(width = 68)
+   val fcsr_rm  = Bits(width = tile.FPConstants.RM_SZ)
+}
 class HFPU(implicit p: Parameters) extends BoomModule()(p)
 {
    val io = IO(new Bundle
    {
-      val req = new ValidIO(new FpuReq).flip
+      val req = new ValidIO(new HfpuReq).flip
       val resp = new ValidIO(new ExeUnitResp(68))
    })
 
@@ -270,7 +278,7 @@ class HFMA(implicit p: Parameters) extends BoomModule()(p)
    val out2 = hfma2.io.out.bits.data
    val out3 = hfma3.io.out.bits.data
    val maxN = Cat(Fill(4,Bits(1)),Bits(0),Fill(10,Bits(1)))
-   val zero = Cat(Fill(57,Bits(0)))
+   val zero = Cat(Fill(16,Bits(0)))
    io.res.valid := hfma0.io.out.valid && hfma1.io.out.valid && hfma2.io.out.valid && hfma3.io.out.valid
    io.res.bits.exc := hfma0.io.out.bits.exc | hfma1.io.out.bits.exc | hfma2.io.out.bits.exc | hfma3.io.out.bits.exc
    io.res.bits.data := Cat(Mux(out3(15,14) === UInt(3) && out3(9,0) === UInt(0), Cat(out3(16),maxN),

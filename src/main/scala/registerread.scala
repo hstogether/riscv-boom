@@ -96,7 +96,8 @@ class RegisterRead(
 
    require (num_total_read_ports == num_read_ports_array.reduce(_+_))
 
-   val regwidth = if (usingFPU || usingHFPU) 65 else 64
+   val regwidth = register_width //if (usingHFPU) 68 else if(usingHFPU) 65 else 64
+   //val regwidth = if (usingHFPU) 68 else if(usingHFPU) 65 else 64
    val rrd_rs1_data   = Wire(Vec(issue_width, Bits(width=regwidth)))
    val rrd_rs2_data   = Wire(Vec(issue_width, Bits(width=regwidth)))
    val rrd_rs3_data   = Wire(Vec(issue_width, Bits(width=regwidth)))

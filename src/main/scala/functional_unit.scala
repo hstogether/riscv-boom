@@ -789,7 +789,7 @@ class IntToFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
 }
 
 class IntToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
-   num_stages = p(BoomKey).intToFpLatency, // TODO: Using intToHfpLatency -- Jecy
+   num_stages = p(BoomKey).intToHfpLatency, // TODO: Using intToHfpLatency -- Jecy
    num_bypass_stages = 0,
    earliest_bypass_stage = 0,
    data_width = 68)(p)

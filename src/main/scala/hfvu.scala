@@ -78,7 +78,7 @@ class HFVU(implicit p: Parameters) extends BoomModule()(p)
 {
    val io = IO(new Bundle
    {
-      val req = new ValidIO(new FpuReq).flip
+      val req = new ValidIO(new HfpuReq).flip
       val resp = new ValidIO(new ExeUnitResp(68))
    })
 
