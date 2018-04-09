@@ -268,17 +268,15 @@ class HSUM(implicit p: Parameters) extends BoomModule()(p)
    hsum1.io.b := one
    hsum1.io.c := in3
 
-   val maxN  = Cat(Fill(4,Bits(1)),Bits(0),Fill(10,Bits(1)))
+   val maxN  = Cat(Bits(1),Bits(0),Fill(14,Bits(1)))
    val hsum0_out = hsum0.io.out
    val hsum1_out = hsum1.io.out
    val ave = Reg(Bool())
    val in4 = Reg(Bits(17))
    val in5 = Reg(Bits(17))
    ave := req1.toint
-   in4 := Mux(hsum0_out(15,14) === UInt(3) && hsum0_out(9,0) === UInt(0),
-              Cat(hsum0_out(16),maxN), hsum0_out)
-   in5 := Mux(hsum1_out(15,14) === UInt(3) && hsum1_out(9,0) === UInt(0),
-              Cat(hsum1_out(16),maxN), hsum1_out)
+   in4 := Mux(hsum0_out(15,13) === UInt(6), Cat(hsum0_out(16),maxN), hsum0_out)
+   in5 := Mux(hsum1_out(15,13) === UInt(6), Cat(hsum1_out(16),maxN), hsum1_out)
    val exc1 = Reg(Bits(5))
    exc1 := hsum0.io.exceptionFlags | hsum1.io.exceptionFlags
 
@@ -295,8 +293,7 @@ class HSUM(implicit p: Parameters) extends BoomModule()(p)
    val hsum2_fN = Cat(hsum2_out_fN(15), hsum2_exp, hsum2_out_fN(9,0))
    val hsum2_ave = hardfloat.recFNFromFN(5, 11, hsum2_fN)
    val hsum2_res = Mux(ave, Cat(Fill(51,UInt(0)),hsum2_ave), hsum2_out)
-   val out  = Mux(hsum2_out(15,14) === UInt(3) && hsum2_out(9,0) === UInt(0),
-                  Cat(hsum2_out(16),maxN), hsum2_res)
+   val out  = Mux(hsum2_out(15,13) === UInt(6), Cat(hsum2_out(16),maxN), hsum2_res)
    val exc  = hsum2.io.exceptionFlags | exc1 
 
    io.res.valid := req2.valid

@@ -564,6 +564,9 @@ class Rob(width: Int,
       //--------------------------------------------------
       // Debug: for debug purposes, track side-effects to all register destinations
 
+      if(DEBUG_PRINTF_HFPU){
+            printf("ROB--num_wakeup_ports_assert------------------------------------------------------\n")
+      }
       for (i <- 0 until num_wakeup_ports)
       {
          val rob_idx = io.wb_resps(i).bits.uop.rob_idx
@@ -572,12 +575,23 @@ class Rob(width: Int,
             rob_uop(GetRowIdx(rob_idx)).debug_wdata := io.debug_wb_wdata(i)
          }
          val temp_uop = rob_uop(GetRowIdx(rob_idx))
+         if(DEBUG_PRINTF_HFPU){
+            printf("rob_idx=[%d]    io.wb_resps(%d).valid=[%d]    GetBankIdx(%d)=[%d]    GetRowIdx(%d)=[%d]\n",
+                    rob_idx,        UInt(i),io.wb_resps(i).valid.asUInt, rob_idx,GetBankIdx(rob_idx), rob_idx, GetRowIdx(rob_idx))
+            printf("io.wb_resp(%d).bits.uop.uopc=[%d]    pop1=[%d]    pop2=[%d]    pop3=[%d]    pdst=[%d]\n",
+                    UInt(i), io.wb_resps(i).bits.uop.uopc, io.wb_resps(i).bits.uop.pop1,
+                             io.wb_resps(i).bits.uop.pop2, io.wb_resps(i).bits.uop.pop3,
+                             io.wb_resps(i).bits.uop.pdst)
+         }
          assert (!(io.wb_resps(i).valid && MatchBank(GetBankIdx(rob_idx)) &&
                      !rob_val(GetRowIdx(rob_idx))),
                   "[ROB] writeback (" + i + ") occurred to an invalid ROB entry.")
          assert (!(io.wb_resps(i).valid && MatchBank(GetBankIdx(rob_idx)) &&
                   temp_uop.ldst_val && temp_uop.pdst =/= io.wb_resps(i).bits.uop.pdst),
                   "[ROB] writeback (" + i + ") occurred to the wrong pdst.")
+      }
+      if(DEBUG_PRINTF_HFPU){
+            printf("ROB--num_wakeup_ports_assert------------------------------------------------------\n")
       }
       io.commit.uops(w).debug_wdata := rob_uop(rob_head).debug_wdata
 

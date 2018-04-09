@@ -531,7 +531,8 @@ class HFVUExeUnit(
                  io.req.bits.rs1_data,io.req.bits.rs2_data,io.req.bits.rs3_data);
          printf("hfvu.io.req.valid=[%d]    hfvu.io.req.rs1=[%x]    hfvu.io.req.rs2=[%x]    hfvu.io.req.rs3=[%x]\n",
                  hfvu.io.req.valid.asUInt, hfvu.io.req.bits.rs1_data,hfvu.io.req.bits.rs2_data,hfvu.io.req.bits.rs3_data);
-         printf("hfvu.io.resp.valid=[%d]   hfvu.io.resp.bits.data=[%x]\n",hfvu.io.resp.valid.asUInt,hfvu.io.resp.bits.data)
+         printf("hfvu.io.resp.valid=[%d]   hfvu.io.resp.bits.data=[%x][%d]\n",
+                 hfvu.io.resp.valid.asUInt,hfvu.io.resp.bits.data,hfvu.io.resp.bits.fflags.bits.flags)
          printf("HFVUExeUnit-End--------------------------------------------------------------------------------------------\n")
       }
    }
@@ -548,8 +549,8 @@ class HFVUExeUnit(
       printf("HFVUExeUnit-Start--------------------------------------------------------------------------------------------\n")
       printf("hfvu_resp_val=[%d]    fu_units.map(_.io.resp.valid).reduce(_|_)=[%d]\n",
               hfvu_resp_val.asUInt, fu_units.map(_.io.resp.valid).reduce(_|_).asUInt)
-      printf("io.resp[0].uop.uopc=[%d]    io.resp[0].uop.dst_rtype=[%d]    io.resp[0].data=[%x]    io.resp[0].valid=[%d]\n",
-              io.resp(0).bits.uop.uopc,   io.resp(0).bits.uop.dst_rtype,   io.resp(0).bits.data,   io.resp(0).valid.asUInt);
+      printf("io.resp[0].uop.uopc=[%d]    io.resp[0].uop.dst_rtype=[%d]    io.resp[0].data=[%x][%d]    io.resp[0].valid=[%d]\n",
+              io.resp(0).bits.uop.uopc,   io.resp(0).bits.uop.dst_rtype,   io.resp(0).bits.data,io.resp(0).bits.fflags.bits.flags,   io.resp(0).valid.asUInt);
       printf("HFVUExeUnit-End--------------------------------------------------------------------------------------------\n")
    }
 }
@@ -636,7 +637,8 @@ class HFPUExeUnit(
                  io.req.bits.rs1_data,io.req.bits.rs2_data,io.req.bits.rs3_data);
          printf("hfpu.io.req.valid=[%d]    hfpu.io.req.rs1=[%x]    hfpu.io.req.rs2=[%x]    hfpu.io.req.rs3=[%x]\n",
                  hfpu.io.req.valid.asUInt,hfpu.io.req.bits.rs1_data,hfpu.io.req.bits.rs2_data,hfpu.io.req.bits.rs3_data);
-         printf("hfpu.io.resp.valid=[%d]    hfpu.io.resp.bits.data=[%x]\n",hfpu.io.resp.valid.asUInt,hfpu.io.resp.bits.data)
+         printf("hfpu.io.resp.valid=[%d]    hfpu.io.resp.bits.data=[%x][%d]\n",
+                 hfpu.io.resp.valid.asUInt, hfpu.io.resp.bits.data,hfpu.io.resp.bits.fflags.bits.flags)
          printf("HFPUExeUnit-End--------------------------------------------------------------------------------------------\n")
       }
 
@@ -689,8 +691,8 @@ class HFPUExeUnit(
       printf("HFPUExeUnit-Start--------------------------------------------------------------------------------------------\n")
       printf("hfpu_resp_val=[%d]    hfdiv_resp_val=[%d]    fu_units.map(_.io.resp.valid).reduce(_|_)=[%d]\n",
               hfpu_resp_val.asUInt, hfdiv_resp_val.asUInt, fu_units.map(_.io.resp.valid).reduce(_|_).asUInt)
-      printf("io.resp[0].uop.uopc=[%d]    io.resp[0].uop.dst_rtype=[%d]    io.resp[0].data=[%x]    io.resp[0].valid=[%d]\n",
-              io.resp(0).bits.uop.uopc,   io.resp(0).bits.uop.dst_rtype,   io.resp(0).bits.data,   io.resp(0).valid.asUInt);
+      printf("io.resp[0].uop.uopc=[%d]    io.resp[0].uop.dst_rtype=[%d]    io.resp[0].data=[%x][%d]    io.resp[0].valid=[%d]\n",
+              io.resp(0).bits.uop.uopc,   io.resp(0).bits.uop.dst_rtype,   io.resp(0).bits.data,io.resp(0).bits.fflags.bits.flags,   io.resp(0).valid.asUInt);
       //printf("HFPUExeUnit-End--------------------------------------------------------------------------------------------\n")
    }
  
@@ -725,8 +727,8 @@ class HFPUExeUnit(
    if(DEBUG_PRINTF_HFPU){
       printf("HFPUExeUnit-Start--------------------------------------------------------------------------------------------\n")
       printf("io.feedback=[%x]\n",io.feedback)
-      printf("io.resp[1].uop.uopc=[%d]    io.resp[1].uop.dst_rtype=[%d]    io.resp[1].data=[%x]    io.resp[1].valid=[%d]\n",
-              io.resp(1).bits.uop.uopc,   io.resp(1).bits.uop.dst_rtype,   io.resp(1).bits.data,   io.resp(1).valid.asUInt);
+      printf("io.resp[1].uop.uopc=[%d]    io.resp[1].uop.dst_rtype=[%d]    io.resp[1].data=[%x][%d]    io.resp[1].valid=[%d]\n",
+              io.resp(1).bits.uop.uopc,   io.resp(1).bits.uop.dst_rtype,   io.resp(1).bits.data,io.resp(1).bits.fflags.bits.flags,   io.resp(1).valid.asUInt);
       printf("HFPUExeUnit-End--------------------------------------------------------------------------------------------\n")
    }
  

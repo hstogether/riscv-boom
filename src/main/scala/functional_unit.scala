@@ -808,35 +808,38 @@ import tile.FPConstants._
    req.in2 := io_req.rs2_data
    req.typ := ImmGenTyp(io_req.uop.imm_packed)
 
-   assert (!(io.req.valid && hfp_ctrl.fromint && req.in1(64).toBool),
-      "[func] IntToHFP integer input has 65th high-order bit set!")
+   assert (!(io.req.valid && hfp_ctrl.fromint && req.in1(67).toBool),
+      "[func] IntToHFP integer input has 68th high-order bit set!")
 
    assert (!(io.req.valid && !hfp_ctrl.fromint),
       "[func] Only support fromInt micro-ops.")
 
-   val ihfpu = Module(new tile.IntToHFP(intToFpLatency))
-   ihfpu.io.in.valid := io.req.valid
-   ihfpu.io.in.bits := req
+   // val ihfpu = Module(new tile.IntToHFP(intToFpLatency))
+   // ihfpu.io.in.valid := io.req.valid
+   // ihfpu.io.in.bits := req
 
-   val req_pipe = Pipe(Reg(next=io.req.valid),req,intToFpLatency)   
+   val uop_reg  = Reg(new MicroOp())
+   uop_reg := io_req.uop
+   val uop_pipe = Pipe(Reg(next=io.req.valid),uop_reg,intToHfpLatency-1)   
+   val uop_pipe2= Pipe(Reg(next=io.req.valid),io_req.uop,intToHfpLatency-1)   
 
-   val ihfpu0 = Module(new tile.IntToHFP(intToFpLatency))
+   val ihfpu0 = Module(new tile.IntToHFP(intToHfpLatency))
    ihfpu0.io.in.valid := io.req.valid
    ihfpu0.io.in.bits := req
 
-   val ihfpu1 = Module(new tile.IntToHFP(intToFpLatency))
+   val ihfpu1 = Module(new tile.IntToHFP(intToHfpLatency))
    ihfpu1.io.in.valid := io.req.valid
    ihfpu1.io.in.bits := req
    ihfpu1.io.in.bits.in1 := Cat(Fill(51,req.in1(33)),req.in1(33,17))
    ihfpu1.io.in.bits.in2 := Cat(Fill(51,req.in2(33)),req.in2(33,17))
  
-   val ihfpu2 = Module(new tile.IntToHFP(intToFpLatency))
+   val ihfpu2 = Module(new tile.IntToHFP(intToHfpLatency))
    ihfpu2.io.in.valid := io.req.valid
    ihfpu2.io.in.bits := req
    ihfpu2.io.in.bits.in1 := Cat(Fill(51,req.in1(50)),req.in1(50,34))
    ihfpu2.io.in.bits.in2 := Cat(Fill(51,req.in2(50)),req.in2(50,34))
   
-   val ihfpu3 = Module(new tile.IntToHFP(intToFpLatency))
+   val ihfpu3 = Module(new tile.IntToHFP(intToHfpLatency))
    ihfpu3.io.in.valid := io.req.valid
    ihfpu3.io.in.bits := req
    ihfpu3.io.in.bits.in1 := Cat(Fill(51,req.in1(67)),req.in1(67,51))
@@ -852,20 +855,22 @@ import tile.FPConstants._
    val exc2  = ihfpu2.io.out.bits.exc
    val exc3  = ihfpu3.io.out.bits.exc
 
-   val maxN  = Cat(Fill(4,Bits(1)),Bits(0),Fill(10,Bits(1)))
-   val zero  = Cat(Fill(57,Bits(0)))
+   val maxN = Cat(Bits(1),Bits(0),Fill(14,Bits(1)))
+   val zero = Cat(Fill(16,Bits(0)))
 
-   val data0 = Mux(out0(15,14) === UInt(3) && out0(9,0) === UInt(0), Cat(out0(16), maxN),
-                   Mux(out0(15,13) === UInt(0), Cat(out0(16), zero), out0))
-   val data  = Mux(req_pipe.bits.cmd === FCMD_CVT_FI, Fill(4,data0),
+   val data0 = Mux(out0(15,13) === UInt(6), Cat(out0(16), maxN),
+                   Mux(out0(15,13) === UInt(0), Cat(out0(16), zero), out0(16,0)))
+   val data  = Mux(uop_pipe.bits.uopc =/= uopFMV_H_X, Cat(data0,data0,data0,data0),
                    Cat(out3(16,0),out2(16,0),out1(16,0),out0(16,0)))
-   val exc   = Mux(req_pipe.bits.cmd === FCMD_CVT_FI, exc0, 
+   val exc   = Mux(uop_pipe.bits.uopc =/= uopFMV_H_X, exc0, 
                   (exc0 | exc1 | exc2 | exc3))
+   val out_valid = Mux(uop_pipe.bits.uopc =/= uopFMV_H_X, ihfpu0.io.out.valid,
+                       (ihfpu0.io.out.valid && ihfpu1.io.out.valid && ihfpu2.io.out.valid && ihfpu3.io.out.valid))
    io.resp.bits.data              := data
    io.resp.bits.fflags.bits.flags := exc
 
    //io.resp.bits.data              := ihfpu.io.out.bits.data
-   io.resp.bits.fflags.valid      := ihfpu.io.out.valid
+   io.resp.bits.fflags.valid      := out_valid //ihfpu.io.out.valid
    io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
    //io.resp.bits.fflags.bits.flags := ihfpu.io.out.bits.exc
 
@@ -892,10 +897,12 @@ import tile.FPConstants._
      printf("ihfpu3-io.out.bits.valid=[%d]    io.out.bits.data=[%x]    io.out.bits.exc=[%d]\n\n",
              ihfpu3.io.out.valid.asUInt,      out3,                    exc3)
 
-     printf("req_pipe.bits.cmd===FCMD_CVT_FI=[%d]    data=[%x]    exc=[%d]\n",   
-            (req_pipe.bits.cmd===FCMD_CVT_FI).asUInt, data,       exc)
-     printf("req.cmd=[%x]    req_pipe.bits.cmd=[%x]\n\n",
-             req.cmd,        req_pipe.bits.cmd)
+     printf("uop_pipe.bits.uopc=/=uopFMV_H_X=[%d]    data=[%x]    exc=[%d]\n",   
+            (uop_pipe.bits.uopc=/=uopFMV_H_X).asUInt,data,       exc)
+     printf("io_req.uop.uopc=[%x]    uop_pipe.bits.uopc=[%x]    io.req.bits.uop.uopc=[%d]    uopFMV_H_X=[%d]\n\n",
+             io_req.uop.uopc,        uop_pipe.bits.uopc,        io.req.bits.uop.uopc,        uopFMV_H_X)
+     printf("io_req.uop.uopc=[%x]    uop_pipe2.bits.uopc=[%x]    io.req.bits.uop.uopc=[%d]    uopFMV_H_X=[%d]\n\n",
+             io_req.uop.uopc,        uop_pipe2.bits.uopc,        io.req.bits.uop.uopc,        uopFMV_H_X)
 
      printf("IHFPU---------------------------------------------------------------------------------------------\n")
    }
@@ -940,13 +947,13 @@ class FPToHFPUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
    fphfpu.io.in.bits := req
 
    val out  = fphfpu.io.out.bits.data
-   val maxN = Cat(Fill(4,Bits(1)),Bits(0),Fill(10,Bits(1)))
-   val zero = Cat(Fill(57,Bits(0)))
-   val data = Mux(out(15,14) === UInt(3) && out(9,0) === UInt(0), Cat(out(16),maxN),
+   val maxN = Cat(Bits(1),Bits(0),Fill(14,Bits(1)))
+   val zero = Cat(Fill(16,Bits(0)))
+   val data = Mux(out(15,13) === UInt(6), Cat(out(16),maxN),
                   Mux(out(15,13) === UInt(0), Cat(out(16),zero), out(16,0)))
    
    //io.resp.bits.data              := fphfpu.io.out.bits.data
-   io.resp.bits.data              := Fill(4,data)
+   io.resp.bits.data              := Cat(data,data,data,data)
    io.resp.bits.fflags.valid      := fphfpu.io.out.valid
    io.resp.bits.fflags.bits.uop   := io.resp.bits.uop
    io.resp.bits.fflags.bits.flags := fphfpu.io.out.bits.exc

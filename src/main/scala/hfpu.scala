@@ -277,18 +277,23 @@ class HFMA(implicit p: Parameters) extends BoomModule()(p)
    val out1 = hfma1.io.out.bits.data
    val out2 = hfma2.io.out.bits.data
    val out3 = hfma3.io.out.bits.data
-   val maxN = Cat(Fill(4,Bits(1)),Bits(0),Fill(10,Bits(1)))
+   val exc0 = hfma0.io.out.bits.exc
+   val exc1 = hfma1.io.out.bits.exc
+   val exc2 = hfma2.io.out.bits.exc
+   val exc3 = hfma3.io.out.bits.exc
+   val maxN = Cat(Bits(1),Bits(0),Fill(14,Bits(1)))
    val zero = Cat(Fill(16,Bits(0)))
    io.res.valid := hfma0.io.out.valid && hfma1.io.out.valid && hfma2.io.out.valid && hfma3.io.out.valid
-   io.res.bits.exc := hfma0.io.out.bits.exc | hfma1.io.out.bits.exc | hfma2.io.out.bits.exc | hfma3.io.out.bits.exc
-   io.res.bits.data := Cat(Mux(out3(15,14) === UInt(3) && out3(9,0) === UInt(0), Cat(out3(16),maxN),
+   io.res.bits.exc := exc0 | exc1 | exc2 | exc3
+   io.res.bits.data := Cat(Mux(out3(15,13) === UInt(6), Cat(out3(16),maxN),
                                Mux(out3(15,13) === UInt(0), Cat(out3(16), zero), out3(16,0))),
-                           Mux(out2(15,14) === UInt(3) && out2(9,0) === UInt(0), Cat(out2(16),maxN),
+                           Mux(out2(15,13) === UInt(6), Cat(out2(16),maxN),
                                Mux(out2(15,13) === UInt(0), Cat(out3(16), zero), out2(16,0))),
-                           Mux(out1(15,14) === UInt(3) && out1(9,0) === UInt(0), Cat(out1(16),maxN),
+                           Mux(out1(15,13) === UInt(6), Cat(out1(16),maxN),
                                Mux(out1(15,13) === UInt(0), Cat(out1(16), zero), out1(16,0))),
-                           Mux(out0(15,14) === UInt(3) && out0(9,0) === UInt(0), Cat(out0(16),maxN),
+                           Mux(out0(15,13) === UInt(6), Cat(out0(16),maxN),
                                Mux(out0(15,13) === UInt(0), Cat(out0(16), zero), out0(16,0))))
+
    if(DEBUG_PRINTF_HFPU){
       printf("HFMA---------------------------------------------------------------------------------------------\n")
       printf("HFMA-io.req.valid=[%d]    io.req.bits.in1=[%x]    io.req.bits.in2=[%x]    io.req.bits.in3=[%x]\n\n",

@@ -398,17 +398,17 @@ class HFDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined 
    assert (!(r_out3_val && (divsqrt3.io.outValid_div || divsqrt3.io.outValid_sqrt)),
       "[fdiv3] Buffered output being overwritten by another output from the fdiv/fsqrt unit.")
 
-
-   val maxN  = Cat(Fill(4,Bits(1)),Bits(0),Fill(10,Bits(1)))
-   val zero  = Cat(Fill(57,Bits(0)))
-   val data3 = Mux(r_out3_wdata(15,14) === UInt(3) && r_out3_wdata(9,0) === UInt(0),
-                       Cat(r_out3_wdata(16),maxN), r_out3_wdata)
-   val data2 = Mux(r_out2_wdata(15,14) === UInt(3) && r_out2_wdata(9,0) === UInt(0),
-                      Cat(r_out2_wdata(16),maxN), r_out2_wdata)
-   val data1 = Mux(r_out1_wdata(15,14) === UInt(3) && r_out1_wdata(9,0) === UInt(0),
-                      Cat(r_out1_wdata(16),maxN), r_out1_wdata)
-   val data0 = Mux(r_out0_wdata(15,14) === UInt(3) && r_out0_wdata(9,0) === UInt(0),
-                       Cat(r_out0_wdata(16),maxN), r_out0_wdata)
+   val maxN = Cat(Bits(1),Bits(0),Fill(14,Bits(1)))
+   val zero = Cat(Fill(16,Bits(0)))
+ 
+   val data3 = Mux(r_out3_wdata(15,13) === UInt(6), Cat(r_out3_wdata(16),maxN),
+                   Mux(r_out3_wdata(15,13) === UInt(0), Cat(r_out3_wdata(16), zero), r_out3_wdata))
+   val data2 = Mux(r_out2_wdata(15,13) === UInt(6), Cat(r_out2_wdata(16),maxN),
+                   Mux(r_out2_wdata(15,13) === UInt(0), Cat(r_out2_wdata(16), zero), r_out2_wdata))
+   val data1 = Mux(r_out1_wdata(15,13) === UInt(6), Cat(r_out1_wdata(16),maxN),
+                   Mux(r_out1_wdata(15,13) === UInt(0), Cat(r_out1_wdata(16), zero), r_out1_wdata))
+   val data0 = Mux(r_out0_wdata(15,13) === UInt(6), Cat(r_out0_wdata(16),maxN),
+                   Mux(r_out0_wdata(15,13) === UInt(0), Cat(r_out0_wdata(16), zero), r_out0_wdata))
 
    io.resp.valid := r_out0_val && r_out1_val && r_out2_val && r_out3_val && !IsKilledByBranch(io.brinfo, r_out0_uop)
    io.resp.bits.uop := r_out0_uop
@@ -427,23 +427,43 @@ class HFDivSqrtUnit(implicit p: Parameters) extends FunctionalUnit(is_pipelined 
 //   io.resp.bits.fflags.bits.uop.br_mask := GetNewBrMask(io.brinfo, r_out_uop)
 //   io.resp.bits.fflags.bits.flags := r_out_flags_double
 //
-//   if(DEBUG_PRINTF_HFDIV){
-//      printf("HFPDIV-Start----------------------------------------------------------------------------------\n")
-//      printf("  In:\n")
-//      printf("    io.req.bits.uop.valid=[%d]    io.req.bits.uop.uopc=[%d]    fdiv_decoder.io.sigs.cmd=[%d]    io.req.bits.rs1_data=[%x]    io.req.bits.rs2_data=[%x]\n",
-//                  io.req.bits.uop.valid.asUInt, io.req.bits.uop.uopc,        fdiv_decoder.io.sigs.cmd,        io.req.bits.rs1_data,        io.req.bits.rs2_data);
-//      printf("    r_buffer_val=[%d]    r_buffer_req.uop.uopc=[%d]    r_buffer_fin.in1=[%x]    r_buffer_fin.in2=[%x]\n",
-//                  r_buffer_val.asUInt, r_buffer_req.uop.uopc,        r_buffer_fin.in1,        r_buffer_fin.in2)
-//      printf("    divsqrt.io.inValid=[%d]    divsqrt.io.sqrtOp=[%d]    divsqrt.io.a=[%x]    divsqrt.io.b=[%x]\n",
-//                  divsqrt.io.inValid.asUInt, divsqrt.io.sqrtOp.asUInt, divsqrt.io.a,        divsqrt.io.b)
-//      printf("  Out:\n")
-//      printf("    divsqrt.io.outValid_div=[%d]    divsqrt.io.outValid_sqrt=[%d]    divsqrt.io.out=[%x]\n",
-//                  divsqrt.io.outValid_div.asUInt, divsqrt.io.outValid_sqrt.asUInt, divsqrt.io.out)
-//      printf("    r_out_val=[%d]    r_out_uop.uopc=[%d]    r_out_wdata_double=[%x]\n",
-//                  r_out_val.asUInt, r_out_uop.uopc,        r_out_wdata_double)
-//      printf("    io.resp.valid=[%d]    io.resp.bits.uop.uopc=[%d]    io.resp.bits.data=[%x]\n",
-//                  io.resp.valid.asUInt, io.resp.bits.uop.uopc,        io.resp.bits.data)
-//      printf("HFPDIV-End------------------------------------------------------------------------------------\n")
-//   }
+   if(DEBUG_PRINTF_HFDIV){
+      printf("HFPDIV-Start----------------------------------------------------------------------------------\n")
+      printf("  In:\n")
+      printf("    io.req.bits.uop.valid=[%d]    io.req.bits.uop.uopc=[%d]    fdiv_decoder.io.sigs.cmd=[%d]    io.req.bits.rs1_data=[%x]    io.req.bits.rs2_data=[%x]\n",
+                  io.req.bits.uop.valid.asUInt, io.req.bits.uop.uopc,        fdiv_decoder.io.sigs.cmd,        io.req.bits.rs1_data,        io.req.bits.rs2_data);
+      printf("    r_buffer_val=[%d]    r_buffer_req.uop.uopc=[%d]    r_buffer_fin.in1=[%x]    r_buffer_fin.in2=[%x]\n\n",
+                  r_buffer_val.asUInt, r_buffer_req.uop.uopc,        r_buffer_fin.in1,        r_buffer_fin.in2)
+      printf("    divsqrt0.io.inValid=[%d]    divsqrt0.io.sqrtOp=[%d]    divsqrt0.io.a=[%x]    divsqrt0.io.b=[%x]\n",
+                  divsqrt0.io.inValid.asUInt, divsqrt0.io.sqrtOp.asUInt, divsqrt0.io.a,        divsqrt0.io.b)
+      printf("    divsqrt1.io.inValid=[%d]    divsqrt1.io.sqrtOp=[%d]    divsqrt1.io.a=[%x]    divsqrt1.io.b=[%x]\n",
+                  divsqrt1.io.inValid.asUInt, divsqrt1.io.sqrtOp.asUInt, divsqrt1.io.a,        divsqrt1.io.b)
+      printf("    divsqrt2.io.inValid=[%d]    divsqrt2.io.sqrtOp=[%d]    divsqrt2.io.a=[%x]    divsqrt2.io.b=[%x]\n",
+                  divsqrt2.io.inValid.asUInt, divsqrt2.io.sqrtOp.asUInt, divsqrt2.io.a,        divsqrt2.io.b)
+      printf("    divsqrt3.io.inValid=[%d]    divsqrt3.io.sqrtOp=[%d]    divsqrt3.io.a=[%x]    divsqrt3.io.b=[%x]\n\n",
+                  divsqrt3.io.inValid.asUInt, divsqrt3.io.sqrtOp.asUInt, divsqrt3.io.a,        divsqrt3.io.b)
+ 
+      printf("  Out:\n")
+      printf("    divsqrt0.io.outValid_div=[%d]    divsqrt0.io.outValid_sqrt=[%d]    divsqrt0.io.out=[%x][%d]\n",
+                  divsqrt0.io.outValid_div.asUInt, divsqrt0.io.outValid_sqrt.asUInt, divsqrt0.io.out,divsqrt0.io.exceptionFlags)
+      printf("    divsqrt1.io.outValid_div=[%d]    divsqrt1.io.outValid_sqrt=[%d]    divsqrt1.io.out=[%x][%d]\n",
+                  divsqrt1.io.outValid_div.asUInt, divsqrt1.io.outValid_sqrt.asUInt, divsqrt1.io.out,divsqrt1.io.exceptionFlags)
+      printf("    divsqrt2.io.outValid_div=[%d]    divsqrt2.io.outValid_sqrt=[%d]    divsqrt2.io.out=[%x][%d]\n",
+                  divsqrt2.io.outValid_div.asUInt, divsqrt2.io.outValid_sqrt.asUInt, divsqrt2.io.out,divsqrt2.io.exceptionFlags)
+      printf("    divsqrt3.io.outValid_div=[%d]    divsqrt3.io.outValid_sqrt=[%d]    divsqrt3.io.out=[%x][%d]\n\n",
+                  divsqrt3.io.outValid_div.asUInt, divsqrt3.io.outValid_sqrt.asUInt, divsqrt3.io.out,divsqrt3.io.exceptionFlags)
+        
+      printf("    r_out0_val=[%d]    r_out0_uop.uopc=[%d]    r_out0_wdata=[%x][%d]\n",
+                  r_out0_val.asUInt, r_out0_uop.uopc,        r_out0_wdata,r_out0_flags)
+      printf("    r_out1_val=[%d]    r_out1_uop.uopc=[%d]    r_out1_wdata=[%x][%d]\n",
+                  r_out1_val.asUInt, r_out1_uop.uopc,        r_out1_wdata,r_out1_flags)
+      printf("    r_out2_val=[%d]    r_out2_uop.uopc=[%d]    r_out2_wdata=[%x][%d]\n",
+                  r_out2_val.asUInt, r_out2_uop.uopc,        r_out2_wdata,r_out2_flags)
+      printf("    r_out3_val=[%d]    r_out3_uop.uopc=[%d]    r_out3_wdata=[%x][%d]\n",
+                  r_out3_val.asUInt, r_out3_uop.uopc,        r_out3_wdata,r_out3_flags)
+      printf("    io.resp.valid=[%d]    io.resp.bits.uop.uopc=[%d]    io.resp.bits.data=[%x][%d]\n",
+                  io.resp.valid.asUInt, io.resp.bits.uop.uopc,        io.resp.bits.data,io.resp.bits.fflags.bits.flags)
+      printf("HFPDIV-End------------------------------------------------------------------------------------\n")
+   }
 }
 

@@ -346,7 +346,7 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       val unrec1_h = hardfloat.fNFromRecFN(5, 11, sdata(33,17))
       val unrec2_h = hardfloat.fNFromRecFN(5, 11, sdata(50,34))
       val unrec3_h = hardfloat.fNFromRecFN(5, 11, sdata(67,51))
-      val unrec_out = Cat(unrec0_h,unrec1_h,unrec2_h,unrec3_h)
+      val unrec_out = Cat(unrec3_h,unrec2_h,unrec1_h,unrec0_h)
 
       io.tosdq.bits.data := unrec_out
    }
@@ -420,9 +420,11 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
    // TODO: feedback ihfpu_resp and fphfpu_resp
    ll_wbarb.io.in(1) <> ihfpu_resp
    ll_wbarb.io.in(2) <> fphfpu_resp
-   exe_units(1).io.feedback := Mux(ll_wbarb.io.in(1).valid && ll_wbarb.io.in(0).valid,
+   // IntToHFPExeUnit
+   exe_units(2).io.feedback := Mux(ll_wbarb.io.in(1).valid && ll_wbarb.io.in(0).valid,
                                    UInt(4,10),UInt(0))
-   exe_units(2).io.feedback := Mux(ll_wbarb.io.in(2).valid && (ll_wbarb.io.in(1).valid || ll_wbarb.io.in(0).valid),
+   // FPToHFPExeUnit
+   exe_units(3).io.feedback := Mux(ll_wbarb.io.in(2).valid && (ll_wbarb.io.in(1).valid || ll_wbarb.io.in(0).valid),
                                    UInt(8,10),UInt(0))
 
    assert( !(ll_wbarb.io.in(1).valid) || (ll_wbarb.io.in(1).valid && ll_wbarb.io.in(1).bits.uop.dst_rtype === RT_FHT))
