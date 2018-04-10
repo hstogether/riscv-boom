@@ -337,31 +337,42 @@ class HfpPipeline(implicit p: Parameters) extends BoomModule()(p)
       when (fregister_read.io.exe_reqs(w).bits.uop.uopc === uopSTD) {
          ex.io.req.valid :=  Bool(false)
       }
-
-      io.tosdq.valid    := fregister_read.io.exe_reqs(w).bits.uop.uopc === uopSTD
-      io.tosdq.bits.uop := fregister_read.io.exe_reqs(w).bits.uop
-      val sdata = fregister_read.io.exe_reqs(w).bits.rs2_data
-
-      val unrec0_h = hardfloat.fNFromRecFN(5, 11, sdata(16,0))
-      val unrec1_h = hardfloat.fNFromRecFN(5, 11, sdata(33,17))
-      val unrec2_h = hardfloat.fNFromRecFN(5, 11, sdata(50,34))
-      val unrec3_h = hardfloat.fNFromRecFN(5, 11, sdata(67,51))
-      val unrec_out = Cat(unrec3_h,unrec2_h,unrec1_h,unrec0_h)
-
-      io.tosdq.bits.data := unrec_out
    }
    require (exe_units.num_total_bypass_ports == 0)
 
    exe_units.ihfpu_unit.io.req <> io.fromint
    exe_units.fphfpu_unit.io.req <> io.fromfp
 
+   // sdq issue port
+   val sdq_port = 0
+   require(sdq_port==0)
+
+   io.tosdq.valid    := fregister_read.io.exe_reqs(sdq_port).bits.uop.uopc === uopSTD
+   io.tosdq.bits.uop := fregister_read.io.exe_reqs(sdq_port).bits.uop
+   val sdata = fregister_read.io.exe_reqs(sdq_port).bits.rs2_data
+
+   val unrec0_h = hardfloat.fNFromRecFN(5, 11, sdata(16,0))
+   val unrec1_h = hardfloat.fNFromRecFN(5, 11, sdata(33,17))
+   val unrec2_h = hardfloat.fNFromRecFN(5, 11, sdata(50,34))
+   val unrec3_h = hardfloat.fNFromRecFN(5, 11, sdata(67,51))
+   val unrec_out = Cat(unrec3_h,unrec2_h,unrec1_h,unrec0_h)
+
+   io.tosdq.bits.data := unrec_out
+
+
    if(DEBUG_PRINTF_HFPU){
-      printf("HfpPipeline--io.fromint/io.fromfp-----------------------------------------------------------------------------\n")
+      printf("HfpPipeline---------------------------------------------------------------------------------------------------\n")
+      printf("  io.fromint/io.fromfp\n")
       printf("io.fromint.uop.uopc=[%d]    io.fromint.rs1_data=[%x]    io.fromint.rs2_data=[%x]    io.fromint.rs3_data=[%x]\n",
               io.fromint.bits.uop.uopc,        io.fromint.bits.rs1_data,        io.fromint.bits.rs2_data,        io.fromint.bits.rs3_data)
-      printf("io.fromfp.uop.uopc=[%d]     io.fromfp.rs1_data =[%x]    io.fromfp.rs2_data =[%x]    io.fromfp.rs3_data =[%x]\n",
+      printf("io.fromfp.uop.uopc=[%d]     io.fromfp.rs1_data =[%x]    io.fromfp.rs2_data =[%x]    io.fromfp.rs3_data =[%x]\n\n",
               io.fromfp.bits.uop.uopc,         io.fromfp.bits.rs1_data,         io.fromfp.bits.rs2_data,         io.fromfp.bits.rs3_data)
-      printf("HfpPipeline--io.fromint/io.fromfp-----------------------------------------------------------------------------\n")
+      printf("  io.tosdq\n")
+      printf("sdq_port=[%d]    io.tosdq.valid=[%d]    io.tosdq.bits.uop.uopc=[%d]    sdata=[%x]\n",
+              UInt(sdq_port),  io.tosdq.valid.asUInt, io.tosdq.bits.uop.uopc,        sdata)
+      printf("unrec3_h=[%x]    unrec2_h=[%x]    unrec1_h=[%x]    unrec0_h=[%x]    io.tosdq.bits.data=[%x]\n", 
+              unrec3_h,        unrec2_h,        unrec1_h,        unrec0_h,        io.tosdq.bits.data)
+      printf("HfpPipeline---------------------------------------------------------------------------------------------------\n")
    }
 
    //-------------------------------------------------------------

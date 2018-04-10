@@ -830,20 +830,20 @@ import tile.FPConstants._
    val ihfpu1 = Module(new tile.IntToHFP(intToHfpLatency))
    ihfpu1.io.in.valid := io.req.valid
    ihfpu1.io.in.bits := req
-   ihfpu1.io.in.bits.in1 := Cat(Fill(51,req.in1(33)),req.in1(33,17))
-   ihfpu1.io.in.bits.in2 := Cat(Fill(51,req.in2(33)),req.in2(33,17))
+   ihfpu1.io.in.bits.in1 := Cat(Fill(52,req.in1(31)),req.in1(31,16))
+   ihfpu1.io.in.bits.in2 := Cat(Fill(52,req.in2(31)),req.in2(31,16))
  
    val ihfpu2 = Module(new tile.IntToHFP(intToHfpLatency))
    ihfpu2.io.in.valid := io.req.valid
    ihfpu2.io.in.bits := req
-   ihfpu2.io.in.bits.in1 := Cat(Fill(51,req.in1(50)),req.in1(50,34))
-   ihfpu2.io.in.bits.in2 := Cat(Fill(51,req.in2(50)),req.in2(50,34))
+   ihfpu2.io.in.bits.in1 := Cat(Fill(52,req.in1(47)),req.in1(47,32))
+   ihfpu2.io.in.bits.in2 := Cat(Fill(52,req.in2(47)),req.in2(47,32))
   
    val ihfpu3 = Module(new tile.IntToHFP(intToHfpLatency))
    ihfpu3.io.in.valid := io.req.valid
    ihfpu3.io.in.bits := req
-   ihfpu3.io.in.bits.in1 := Cat(Fill(51,req.in1(67)),req.in1(67,51))
-   ihfpu3.io.in.bits.in2 := Cat(Fill(51,req.in2(67)),req.in2(67,51))
+   ihfpu3.io.in.bits.in1 := Cat(Fill(52,req.in1(63)),req.in1(63,48))
+   ihfpu3.io.in.bits.in2 := Cat(Fill(52,req.in2(63)),req.in2(63,48))
  
    val out0  = ihfpu0.io.out.bits.data
    val out1  = ihfpu1.io.out.bits.data
