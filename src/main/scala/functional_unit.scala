@@ -717,7 +717,8 @@ class HFPUUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
 // All HFP instructions are padded out to the max latency unit for easy
 // write-port scheduling.
 class HFVUUnit(implicit p: Parameters) extends PipelinedFunctionalUnit(
-   num_stages = p(tile.TileKey).core.hfpu.get.hfmaLatency,
+   // num_stages = p(tile.TileKey).core.hfpu.get.hfmaLatency,
+   num_stages = 1,
    num_bypass_stages = 0,
    earliest_bypass_stage = 0,
    data_width = 68)(p)

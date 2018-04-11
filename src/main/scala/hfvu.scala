@@ -126,7 +126,7 @@ class HFVU(implicit p: Parameters) extends BoomModule()(p)
               io_req.uop.uopc,             req.cmd,        req.rm,        io_req.rs1_data,io_req.rs2_data,io_req.rs3_data);
       printf("hfsu.io.req.valid=[%d]    hpru.io.in.valid=[%d]\n",
               hfsu.io.req.valid.asUInt, hpru.io.req.valid.asUInt)
-      printf("hfsu.io.res.valid=[%d]  hpru_out.valid =[%d]\n",
+      printf("hfsu.io.res.valid=[%d]    hpru_out.valid =[%d]\n",
               hfsu.io.res.valid.asUInt, hpru.io.res.valid.asUInt)
       printf("hfsu.io.res=[%x][%d]    hpruio.res=[%x][%d]\n",
               hfsu.io.res.bits.data, hfsu.io.res.bits.exc,   
@@ -149,20 +149,23 @@ class HCMP(implicit p: Parameters) extends BoomModule()(p)
       val req = Valid(new tile.HFPInput).flip
       val res = Valid(new tile.HFPResult)
    }
+   val hfp_width = 17
    
    val req1 = Reg(new tile.HFPInput)
-   val valid1 = io.req.valid
-   when (io.req.valid) { req1 := io.req.bits }
-   val in10 = req1.in1(16,0)
-   val in11 = req1.in1(33,17)
-   val in12 = req1.in1(50,34)
-   val in13 = req1.in1(67,51)
+   val valid1 = Reg(init = Bool(false))
+   when (io.req.valid) { 
+     req1 := io.req.bits
+     valid1 := io.req.valid
+   }
+   val in10 = io.req.bits.in1(16,0)
+   val in11 = io.req.bits.in1(33,17)
+   val in12 = io.req.bits.in1(50,34)
+   val in13 = io.req.bits.in1(67,51)
 
-   val req2 = Pipe(Reg(next=io.req.valid), io.req.bits, 2)
-   val in20 = req2.bits.in1(16,0)
-   val in21 = req2.bits.in1(33,17)
-   val in22 = req2.bits.in1(50,34)
-   val in23 = req2.bits.in1(67,51)
+   // val in20 = req1.in1(16,0)
+   // val in21 = req1.in1(33,17)
+   // val in22 = req1.in1(50,34)
+   // val in23 = req1.in1(67,51)
 
    // min/max
    val cmp0 = Module(new hardfloat.CompareRecFN(5,11))
@@ -175,17 +178,16 @@ class HCMP(implicit p: Parameters) extends BoomModule()(p)
    cmp1.io.b := in13
    cmp1.io.signaling := UInt(1)
 
-   val max1 = Reg(Bool())
-   val in4 = Reg(Bits(17))
-   val in5 = Reg(Bits(17))
-   max1 := req1.tohfp
+   val in4 = Reg(Bits(width=hfp_width))
+   val in5 = Reg(Bits(width=hfp_width))
+   val max1 = io.req.bits.tohfp
    in4 := Mux((max1 && cmp0.io.gt) ||
-              (!max1 && (cmp0.io.lt || cmp0.io.eq)), in20,
-               in21)
+              (!max1 && (cmp0.io.lt || cmp0.io.eq)), in10,
+               in11)
    in5 := Mux((max1 && cmp1.io.gt) ||
-              (!max1 && (cmp1.io.lt || cmp1.io.eq)), in22,
-               in23)
-   val exc1 = Reg(Bits(5))
+              (!max1 && (cmp1.io.lt || cmp1.io.eq)), in12,
+               in13)
+   val exc1 = Reg(Bits(width=5))
    exc1 := cmp0.io.exceptionFlags | cmp1.io.exceptionFlags
 
    val cmp2 = Module(new hardfloat.CompareRecFN(5,11))
@@ -193,13 +195,13 @@ class HCMP(implicit p: Parameters) extends BoomModule()(p)
    cmp2.io.b := in5
    cmp2.io.signaling := UInt(1)
 
-   val max2 = req2.bits.tohfp
-   val out = Mux((max2 && cmp0.io.gt) ||
+   val max2 = req1.tohfp
+   val out = Mux((max2 && cmp2.io.gt) ||
                  (!max2 && (cmp2.io.lt || cmp2.io.eq)), in4,
                   in5)
    val exc2 = exc1 | cmp2.io.exceptionFlags
    
-   io.res.valid := req2.valid
+   io.res.valid := valid1
    io.res.bits.exc := exc2
    io.res.bits.data := Cat(Fill(51,UInt(0)),out)
 
@@ -209,8 +211,6 @@ class HCMP(implicit p: Parameters) extends BoomModule()(p)
                    io.req.valid.asUInt, io.req.bits.in1,        io.req.bits.in2)
       printf("  req1.valid=[%d]      req1.in1=[%x]      req1.in2=[%x]\n",
                 valid1.asUInt,       req1.in1,          req1.in2)
-      printf("  req2.valid=[%d]      req2.bits.in1=[%x]      req2.bits.in2=[%x]\n\n",
-                req2.valid.asUInt,   req2.bits.in1,          req2.bits.in2)
 
       printf("in10=[%x]    in11=[%x]    in12=[%x]    in13=[%x]\n",
               in10,        in11,        in12,        in13)
@@ -219,8 +219,8 @@ class HCMP(implicit p: Parameters) extends BoomModule()(p)
       printf("cmp1.io.lt=[%d]    cmp1.io.eq=[%d]    cmp1.io.gt=[%d]\n\n",
               cmp1.io.lt.asUInt, cmp1.io.eq.asUInt, cmp1.io.gt.asUInt)
 
-      printf("in20=[%x]    in21=[%x]    in22=[%x]    in23=[%x]\n",
-              in20,        in21,        in22,        in23)
+      // printf("in20=[%x]    in21=[%x]    in22=[%x]    in23=[%x]\n",
+      //         in20,        in21,        in22,        in23)
       printf("max1=[%d]    in4=[%x]     in5=[%x]     exc1=[%d]\n",
               max1.asUInt, in4,         in5,         exc1)
       printf("cmp2.io.lt=[%d]    cmp2.io.eq=[%d]    cmp1.io.gt=[%d]\n\n",
@@ -241,19 +241,21 @@ class HSUM(implicit p: Parameters) extends BoomModule()(p)
       val req = Valid(new tile.HFPInput).flip
       val res = Valid(new tile.HFPResult)
    }
-   
+   val hfp_width = 17
+
    val req1 = Reg(new tile.HFPInput)
-   val valid1 = io.req.valid
-   when (io.req.valid) { req1 := io.req.bits }
-   val in0 = req1.in1(16,0)
-   val in1 = req1.in1(33,17)
-   val in2 = req1.in1(50,34)
-   val in3 = req1.in1(67,51)
-   val one = UInt(1) << 10
+   val valid1 = Reg(init = Bool(false))
+   when (io.req.valid) { 
+      req1 := io.req.bits
+      valid1 := io.req.valid
+   }
+   val in0 = io.req.bits.in1(16,0)
+   val in1 = io.req.bits.in1(33,17)
+   val in2 = io.req.bits.in1(50,34)
+   val in3 = io.req.bits.in1(67,51)
+   val one = Cat(Bits(0), UInt(1) << 15)
 
-   val req2 = Pipe(Reg(next=io.req.valid), io.req.bits, 2)
-
-   // min/max
+   // sum/ave
    val hsum0 = Module(new hardfloat.MulAddRecFN(5,11))
    hsum0.io.op := Bits(0,2)
    hsum0.io.roundingMode := UInt(0)
@@ -272,12 +274,12 @@ class HSUM(implicit p: Parameters) extends BoomModule()(p)
    val hsum0_out = hsum0.io.out
    val hsum1_out = hsum1.io.out
    val ave = Reg(Bool())
-   val in4 = Reg(Bits(17))
-   val in5 = Reg(Bits(17))
-   ave := req1.toint
+   val in4 = Reg(Bits(width=hfp_width))
+   val in5 = Reg(Bits(width=hfp_width))
+   ave := io.req.bits.toint
    in4 := Mux(hsum0_out(15,13) === UInt(6), Cat(hsum0_out(16),maxN), hsum0_out)
    in5 := Mux(hsum1_out(15,13) === UInt(6), Cat(hsum1_out(16),maxN), hsum1_out)
-   val exc1 = Reg(Bits(5))
+   val exc1 = Reg(Bits(width=5))
    exc1 := hsum0.io.exceptionFlags | hsum1.io.exceptionFlags
 
    val hsum2 = Module(new hardfloat.MulAddRecFN(5,11))
@@ -289,14 +291,18 @@ class HSUM(implicit p: Parameters) extends BoomModule()(p)
 
    val hsum2_out = hsum2.io.out
    val hsum2_out_fN = hardfloat.fNFromRecFN(5, 11, hsum2_out(16,0))
-   val hsum2_exp = Mux(hsum2_out_fN(14,10) > UInt(1), hsum2_out_fN(15,11) - UInt(2), UInt(1,5))
-   val hsum2_fN = Cat(hsum2_out_fN(15), hsum2_exp, hsum2_out_fN(9,0))
+   val hsum2_exp = Mux(hsum2_out_fN(14,10) > UInt(1), hsum2_out_fN(14,10) - UInt(2,5), UInt(0,5))
+   val hsum2_fra = Mux(hsum2_out_fN(14,10) === UInt(2), Cat(UInt(1),hsum2_out_fN(9,1)),
+                   Mux(hsum2_out_fN(14,10) === UInt(1), Cat(UInt(1,2),hsum2_out_fN(9,2)),
+                   Mux(hsum2_out_fN(14,10) === UInt(0), Cat(Bits(0,2),hsum2_out_fN(9,2)),
+                       hsum2_out_fN(9,0))))
+   val hsum2_fN = Cat(hsum2_out_fN(15), hsum2_exp, hsum2_fra)
    val hsum2_ave = hardfloat.recFNFromFN(5, 11, hsum2_fN)
    val hsum2_res = Mux(ave, Cat(Fill(51,UInt(0)),hsum2_ave), hsum2_out)
    val out  = Mux(hsum2_out(15,13) === UInt(6), Cat(hsum2_out(16),maxN), hsum2_res)
    val exc  = hsum2.io.exceptionFlags | exc1 
 
-   io.res.valid := req2.valid
+   io.res.valid := valid1
    io.res.bits.exc := exc
    io.res.bits.data := Cat(Fill(51,UInt(0)),out)
 
@@ -306,8 +312,6 @@ class HSUM(implicit p: Parameters) extends BoomModule()(p)
                    io.req.valid.asUInt, io.req.bits.in1,        io.req.bits.in2)
       printf("  req1.valid=[%d]      req1.in1=[%x]      req1.in2=[%x]\n",
                 valid1.asUInt,       req1.in1,          req1.in2)
-      printf("  req2.valid=[%d]      req2.bits.in1=[%x]      req2.bits.in2=[%x]\n\n",
-                req2.valid.asUInt,   req2.bits.in1,          req2.bits.in2)
 
       printf("in0=[%x]    in1=[%x]    in2=[%x]    in3=[%x]\n",
               in0,        in1,        in2,        in3)
@@ -320,8 +324,8 @@ class HSUM(implicit p: Parameters) extends BoomModule()(p)
       printf("hsum2_out=[%x][%d]\n\n",
               hsum2_out, hsum2.io.exceptionFlags)
 
-      printf("hsum2_out_fN=[%x]    hsum2_exp=[%x]    hsum2_fN=[%x]\n",
-              hsum2_out_fN,        hsum2_exp,        hsum2_fN)
+      printf("hsum2_out_fN=[%x]    hsum2_exp=[%x]    hsum2_fra=[%x]    hsum2_fN=[%x]\n",
+              hsum2_out_fN,        hsum2_exp,        hsum2_fra,        hsum2_fN)
       printf("hsum2_ave=[%x]    hsum2_res=[%x]    out=[%x]    exc=[%d]\n\n",
               hsum2_ave,        hsum2_res,        out,        exc)
 
@@ -331,31 +335,29 @@ class HSUM(implicit p: Parameters) extends BoomModule()(p)
    }
 }
 
-
+// 2 cycle
 class HPRU()(implicit p: Parameters) extends BoomModule()(p)
 {
    val io = new Bundle {
       val req = Valid(new tile.HFPInput).flip
       val res = Valid(new tile.HFPResult)
    }
-   val hfvu_latency = hfmaLatency * 2
    val hcmp =  Module(new HCMP())
    hcmp.io.req.valid := io.req.valid && io.req.bits.cmd === FCMD_MINMAX
-   hcmp.io.req.bits := io.req
+   hcmp.io.req.bits := io.req.bits
 
 
    val hsum = Module(new HSUM())
    hsum.io.req.valid := io.req.valid && io.req.bits.cmd === FCMD_ADD
-   hsum.io.req.bits := io.req
+   hsum.io.req.bits := io.req.bits
 
    val valid = hcmp.io.res.valid || hsum.io.res.valid
    val out = Mux(hcmp.io.res.valid, hcmp.io.res, hsum.io.res)
 
-   val out8   = Pipe(Reg(next=valid), out.bits, hfvu_latency-2)
 
-   io.res.valid := out8.valid
-   io.res.bits.data := out8.bits.data
-   io.res.bits.exc := out8.bits.exc
+   io.res.valid := valid
+   io.res.bits.data := out.bits.data
+   io.res.bits.exc := out.bits.exc
 
    if(DEBUG_PRINTF_HFPU){
       printf("HPRU---------------------------------------------------------------------------------------------\n")
@@ -378,6 +380,7 @@ class HPRU()(implicit p: Parameters) extends BoomModule()(p)
    }
 }
 
+// 2 cycle
 class HFSU()(implicit p: Parameters) extends BoomModule()(p)
 {
    val io = new Bundle {
@@ -385,6 +388,7 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
       val res = Valid(new tile.HFPResult)
    }
    val hfvu_latency = hfmaLatency * 2
+   val hfp_width = 17
 
    val rm = io.req.bits.rm
    val in0 = io.req.bits.in1(16,0)
@@ -392,10 +396,10 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
    val in2 = io.req.bits.in1(50,34)
    val in3 = io.req.bits.in1(67,51)
 
-   val out0 = Wire(Bits(17))
-   val out1 = Wire(Bits(17))
-   val out2 = Wire(Bits(17))
-   val out3 = Wire(Bits(17))
+   val out0 = Wire(Bits(width=hfp_width))
+   val out1 = Wire(Bits(width=hfp_width))
+   val out2 = Wire(Bits(width=hfp_width))
+   val out3 = Wire(Bits(width=hfp_width))
 
    val sel0 = rm === UInt(0)
    val sel1 = rm === UInt(1)
@@ -405,7 +409,7 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
    val sel5 = rm === UInt(5)
    val sel6 = rm === UInt(6)
    val sel7 = rm === UInt(7)
-   assert( !(io.req.valid && (sel0 || sel7)), "HFSU input rm eq 0 or 7.")
+   assert( !(io.req.valid && (sel0 || sel7)), "HFSU Invalid hfsu instruction.")
 
    out0 := Mux(sel4, in0,
            Mux(sel1 || sel5, in1,
@@ -413,7 +417,7 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
            Mux(sel3, in3,
                UInt(0)))))
    out1 := Mux(sel3 || sel4 || sel5 || sel6, in0,
-           Mux(sel1, in1,
+           Mux(sel1, in2,
            Mux(sel2, in3,
                UInt(0))))
    out2 := Mux(sel2 || sel4, in0,
@@ -427,6 +431,7 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
                UInt(0)))))
 
    when(io.req.bits.ren2 && io.req.bits.ren3){
+      assert( (io.req.valid && (sel1 || sel2)), "HFSU Invalid PAL/PAH instrucion.")
       out0 := Mux(sel1, io.req.bits.in1(16,0),
               Mux(sel2, io.req.bits.in3(16,0),
                   UInt(0)))
@@ -441,15 +446,15 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
                   UInt(0)))
    }
 
-   val out = Wire(new tile.HFPResult)
+   val out = Reg(new tile.HFPResult)
+   val valid1 = Reg(init = Bool(false))
    out.data := Cat(out3, out2, out1, out0)
    out.exc := UInt(0)
-   val hfsu_out = Pipe(Reg(next=io.req.valid),
-                       out, hfvu_latency)
+   valid1 := io.req.valid
 
-   io.res.valid     := hfsu_out.valid
-   io.res.bits.exc  := hfsu_out.bits.exc
-   io.res.bits.data := hfsu_out.bits.data
+   io.res.valid     := valid1
+   io.res.bits.exc  := out.exc
+   io.res.bits.data := out.data
 
    if(DEBUG_PRINTF_HFPU){
      printf("HFSU---------------------------------------------------------------------------------------------\n")
@@ -459,12 +464,12 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
              io.req.bits.ren1.asUInt, io.req.bits.ren2.asUInt, io.req.bits.ren3.asUInt)
 
      printf("in0=[%x]    in1=[%x]    in2=[%x]    in3=[%x]\n",
-             in0,        in1,        in3,        in3)
+             in0,        in1,        in2,        in3)
      printf("sel0=[%d]    sel1=[%d]    sel2=[%d]    sel3=[%d]    sel4=[%d]    sel5=[%d]    sel6=[%d]    sel7=[%d]\n\n",
              sel0.asUInt, sel1.asUInt, sel2.asUInt, sel3.asUInt, sel4.asUInt, sel5.asUInt, sel6.asUInt, sel7.asUInt)
 
-     printf("out0=[%x]    out1=[%x]    out2=[%x]    out3=[%x]    out=[%x]    exc=[%d]\n",
-             out0,        out1,        out2,        out3,        out.data,   out.exc)
+     printf("out0=[%x]    out1=[%x]    out2=[%x]    out3=[%x]    out=[%x]    exc=[%d]    valid1=[%d]\n",
+             out0,        out1,        out2,        out3,        out.data,   out.exc,    valid1.asUInt)
      printf("io.res.valid=[%d]    io.res.bits.data=[%x][%d]\n",
              io.res.valid.asUInt, io.res.bits.data, io.res.bits.exc)
      printf("HFSU---------------------------------------------------------------------------------------------\n")

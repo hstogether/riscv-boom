@@ -488,7 +488,7 @@ class HFVUExeUnit(
       has_hfvu = has_hfvu)(p)
 {
    println ("     ExeUnit--")
-   if (has_hfvu) println ("       - HFVU (Latency: " + hfmaLatency + ")")
+   if (has_hfvu) println ("       - HFVU (Latency: " + 2 + ")")
 
    // The Functional Units --------------------
    val fu_units = ArrayBuffer[FunctionalUnit]()

@@ -297,7 +297,15 @@ object HfpuRRdDecode extends RRdDecodeConstants
          BitPat(uopFMADD_H) ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
          BitPat(uopFMSUB_H) ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
          BitPat(uopFNMADD_H)->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
-         BitPat(uopFNMSUB_H)->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N))
+         BitPat(uopFNMSUB_H)->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopRELU_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopLSA0_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopLSA1_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopLSA2_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopLSA3_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N)
+         )
 }
  
 
@@ -391,6 +399,32 @@ object HfDivRRdDecode extends RRdDecodeConstants
          BitPat(uopFSQRT_H) ->List(BR_N, N, Y, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N))
 }
 
+object HfvuRRdDecode extends RRdDecodeConstants
+{
+   val table: Array[(BitPat, List[BitPat])] =
+              Array[(BitPat, List[BitPat])](
+                               // br type
+                               // |      use alu pipe              op1 sel   op2 sel
+                               // |      |  use muldiv pipe        |         |         immsel       csr_cmd
+                               // |      |  |  use mem pipe        |         |         |     rf wen |
+                               // |      |  |  |  alu fcn  wd/word?|         |         |     |      |
+                               // |      |  |  |  |        |       |         |         |     |      |
+         BitPat(uopRS1_H)   ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopRS2_H)   ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopRS3_H)   ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopFI0_H)   ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopCR_H)    ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopTR_H)    ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopPAL_H)   ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopPAH_H)   ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+
+         BitPat(uopPMAX_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopPMIN_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopPSUM_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N),
+         BitPat(uopPAVE_H)  ->List(BR_N, Y, N, N, FN_X   , DW_X  , OP1_X   , OP2_X   , IS_X, REN_1, rocket.CSR.N))
+}
+
 class RegisterReadDecode(supported_units: SupportedFuncUnits)(implicit p: Parameters) extends BoomModule()(p)
 {
    val io = IO(new BoomBundle()(p)
@@ -418,6 +452,7 @@ class RegisterReadDecode(supported_units: SupportedFuncUnits)(implicit p: Parame
    if (supported_units.hfdiv) dec_table ++= HfDivRRdDecode.table
    if (supported_units.fphfpu) dec_table ++= FhfmvRRdDecode.table
    if (supported_units.ihfpu) dec_table ++= IhfmvRRdDecode.table
+   if (supported_units.hfvu) dec_table ++= HfvuRRdDecode.table
    val rrd_cs = Wire(new RRdCtrlSigs()).decode(io.rrd_uop.uopc, dec_table)
 
    // rrd_use_alupipe is unused
