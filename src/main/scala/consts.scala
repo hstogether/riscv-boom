@@ -338,6 +338,9 @@ trait ScalarOpConstants
 
    val uopPAL_H     = UInt(169,UOPC_SZ)
    val uopPAH_H     = UInt(170,UOPC_SZ)
+   val uopLSE1_H    = UInt(171,UOPC_SZ)
+   val uopLSE2_H    = UInt(172,UOPC_SZ)
+   val uopLSE3_H    = UInt(173,UOPC_SZ)
 
    val uopSYSTEM    = UInt(122, UOPC_SZ) // pass uop down the CSR pipeline and let it handle it
 

@@ -57,6 +57,9 @@ class UOPCodeHFVUDecoder extends Module
 
       BitPat(uopPAL_H)    -> List(FCMD_HFS,    X,X,Y,Y,Y, N,X,N,Y,N,N,N,N,Y,Y,Y,N, N,N,N,N),
       BitPat(uopPAH_H)    -> List(FCMD_HFS,    X,X,Y,Y,Y, N,X,N,Y,N,N,N,N,Y,Y,Y,N, N,N,N,N),
+      BitPat(uopLSE1_H)   -> List(FCMD_HFS,    X,X,Y,Y,N, N,X,N,Y,N,N,N,N,Y,Y,Y,N, N,N,N,N),
+      BitPat(uopLSE2_H)   -> List(FCMD_HFS,    X,X,Y,Y,N, N,X,N,Y,N,N,N,N,Y,Y,Y,N, N,N,N,N),
+      BitPat(uopLSE3_H)   -> List(FCMD_HFS,    X,X,Y,Y,N, N,X,N,Y,N,N,N,N,Y,Y,Y,N, N,N,N,N),
 
       BitPat(uopPMAX_H)   -> List(FCMD_MINMAX, X,X,Y,Y,N, N,N,N,Y,N,N,N,Y,Y,Y,Y,N, N,N,N,Y), // tohfp for max
       BitPat(uopPMIN_H)   -> List(FCMD_MINMAX, X,X,Y,Y,N, N,N,N,Y,N,N,N,N,Y,N,Y,N, N,N,N,Y),
@@ -387,7 +390,6 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
       val req = Valid(new tile.HFPInput).flip
       val res = Valid(new tile.HFPResult)
    }
-   val hfvu_latency = hfmaLatency * 2
    val hfp_width = 17
 
    val rm = io.req.bits.rm
@@ -409,7 +411,7 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
    val sel5 = rm === UInt(5)
    val sel6 = rm === UInt(6)
    val sel7 = rm === UInt(7)
-   assert( !(io.req.valid && (sel0 || sel7)), "HFSU Invalid hfsu instruction.")
+   assert( !(io.req.valid && (sel0 || sel7)), "HFSU Invalid hfsu instrucion.")
 
    out0 := Mux(sel4, in0,
            Mux(sel1 || sel5, in1,
@@ -430,6 +432,27 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
            Mux(sel6, in3,
                UInt(0)))))
 
+   when(io.req.bits.ren2 && !io.req.bits.ren3){
+      assert( (io.req.valid && (sel5 || sel6 || sel3)), "HFSU Invalid LSE instrucion.")
+      out0 := Mux(sel5, io.req.bits.in2(67,51),
+              Mux(sel6, io.req.bits.in2(50,34),
+              Mux(sel3, io.req.bits.in2(33,17),
+                  UInt(0))))
+      out1 := Mux(sel5, io.req.bits.in1(16,0),
+              Mux(sel6, io.req.bits.in2(67,51),
+              Mux(sel3, io.req.bits.in2(50,34),
+                  UInt(0))))
+      out2 := Mux(sel5, io.req.bits.in1(33,17),
+              Mux(sel6, io.req.bits.in1(16,0),
+              Mux(sel3, io.req.bits.in2(67,51),
+                  UInt(0))))
+      out3 := Mux(sel5, io.req.bits.in1(50,34),
+              Mux(sel6, io.req.bits.in1(33,17),
+              Mux(sel3, io.req.bits.in1(16,0),
+                  UInt(0))))
+      }
+
+
    when(io.req.bits.ren2 && io.req.bits.ren3){
       assert( (io.req.valid && (sel1 || sel2)), "HFSU Invalid PAL/PAH instrucion.")
       out0 := Mux(sel1, io.req.bits.in1(16,0),
@@ -445,6 +468,7 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
               Mux(sel2, io.req.bits.in2(16,0),
                   UInt(0)))
    }
+
 
    val out = Reg(new tile.HFPResult)
    val valid1 = Reg(init = Bool(false))

@@ -457,7 +457,10 @@ object HFVecDecode extends DecodeConstants
    LSA3_H    ->List(Y, N, N, Y, uopLSA3_H,  IQT_HFP, FU_HFPU, RT_FHT, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
 
    PAL_H     ->List(Y, N, N, Y, uopPAL_H,   IQT_HFP, FU_HFVU, RT_FHT, RT_FHT, RT_FHT, RT_FHT, Y, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
-   PAH_H     ->List(Y, N, N, Y, uopPAH_H,   IQT_HFP, FU_HFVU, RT_FHT, RT_FHT, RT_FHT, RT_FHT, Y, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N)
+   PAH_H     ->List(Y, N, N, Y, uopPAH_H,   IQT_HFP, FU_HFVU, RT_FHT, RT_FHT, RT_FHT, RT_FHT, Y, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   LSE1_H    ->List(Y, N, N, Y, uopLSE1_H,  IQT_HFP, FU_HFVU, RT_FHT, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   LSE2_H    ->List(Y, N, N, Y, uopLSE2_H,  IQT_HFP, FU_HFVU, RT_FHT, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N),
+   LSE3_H    ->List(Y, N, N, Y, uopLSE3_H,  IQT_HFP, FU_HFVU, RT_FHT, RT_FHT, RT_FHT, RT_X  , N, IS_X, N, N, N, N, N, M_X  , MSK_X , UInt(0), N, N, N, N, N, N, CSR.N)
    )
 // scalastyle:on
 }
