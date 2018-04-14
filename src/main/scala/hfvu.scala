@@ -156,10 +156,10 @@ class HCMP(implicit p: Parameters) extends BoomModule()(p)
    
    val req1 = Reg(new tile.HFPInput)
    val valid1 = Reg(init = Bool(false))
-   when (io.req.valid) { 
+   // when (io.req.valid) { 
      req1 := io.req.bits
      valid1 := io.req.valid
-   }
+   // }
    val in10 = io.req.bits.in1(16,0)
    val in11 = io.req.bits.in1(33,17)
    val in12 = io.req.bits.in1(50,34)
@@ -246,12 +246,12 @@ class HSUM(implicit p: Parameters) extends BoomModule()(p)
    }
    val hfp_width = 17
 
-   val req1 = Reg(new tile.HFPInput)
+   // val req1 = Reg(new tile.HFPInput)
    val valid1 = Reg(init = Bool(false))
-   when (io.req.valid) { 
-      req1 := io.req.bits
+   // when (io.req.valid) { 
+      // req1 := io.req.bits
       valid1 := io.req.valid
-   }
+   // }
    val in0 = io.req.bits.in1(16,0)
    val in1 = io.req.bits.in1(33,17)
    val in2 = io.req.bits.in1(50,34)
@@ -313,8 +313,9 @@ class HSUM(implicit p: Parameters) extends BoomModule()(p)
       printf("HSUM-------------------------------------------------------------------------\n")
       printf("hsum-io.req.valid=[%d]    io.req.bits.in1=[%x]    io.req.bits.in2=[%x]\n",
                    io.req.valid.asUInt, io.req.bits.in1,        io.req.bits.in2)
-      printf("  req1.valid=[%d]      req1.in1=[%x]      req1.in2=[%x]\n",
-                valid1.asUInt,       req1.in1,          req1.in2)
+      // printf("  req1.valid=[%d]      req1.in1=[%x]      req1.in2=[%x]\n",
+      //           valid1.asUInt,       req1.in1,          req1.in2)
+      printf("  valid1.valid=[%d]\n",valid1.asUInt)
 
       printf("in0=[%x]    in1=[%x]    in2=[%x]    in3=[%x]\n",
               in0,        in1,        in2,        in3)
@@ -369,7 +370,7 @@ class HPRU()(implicit p: Parameters) extends BoomModule()(p)
 
       printf("hcmp-io.in.valid=[%d]    io.in.bits.in1=[%x]     io.in.bits.in2=[%x]     io.in.bits.in3=[%x]\n",
                    hcmp.io.req.valid.asUInt, hcmp.io.req.bits.in1, hcmp.io.req.bits.in2,  hcmp.io.req.bits.in3)  
-      printf("hcmm-io.res.valid=[%d]    io.res.data=[%x]    io.res.exc=[%d]\n",
+      printf("hcmp-io.res.valid=[%d]    io.res.data=[%x]    io.res.exc=[%d]\n",
                    hcmp.io.res.valid.asUInt, hcmp.io.res.bits.data,   hcmp.io.res.bits.exc)
       printf("hsum-io.in.valid=[%d]    io.in.bits.in1=[%x]     io.in.bits.in2=[%x]     io.in.bits.in3=[%x]\n",
                    hsum.io.req.valid.asUInt, hsum.io.req.bits.in1, hsum.io.req.bits.in2,  hsum.io.req.bits.in3)  
@@ -411,7 +412,7 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
    val sel5 = rm === UInt(5)
    val sel6 = rm === UInt(6)
    val sel7 = rm === UInt(7)
-   assert( !(io.req.valid && (sel0 || sel7)), "HFSU Invalid hfsu instrucion.")
+   // assert( !(io.req.valid && (sel0 || sel7)), "HFSU Invalid hfsu instrucion.")
 
    out0 := Mux(sel4, in0,
            Mux(sel1 || sel5, in1,
@@ -433,7 +434,7 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
                UInt(0)))))
 
    when(io.req.bits.ren2 && !io.req.bits.ren3){
-      assert( (io.req.valid && (sel5 || sel6 || sel3)), "HFSU Invalid LSE instrucion.")
+      // assert( (io.req.valid && (sel5 || sel6 || sel3)), "HFSU Invalid LSE instrucion.")
       out0 := Mux(sel5, io.req.bits.in2(67,51),
               Mux(sel6, io.req.bits.in2(50,34),
               Mux(sel3, io.req.bits.in2(33,17),
@@ -454,7 +455,7 @@ class HFSU()(implicit p: Parameters) extends BoomModule()(p)
 
 
    when(io.req.bits.ren2 && io.req.bits.ren3){
-      assert( (io.req.valid && (sel1 || sel2)), "HFSU Invalid PAL/PAH instrucion.")
+      // assert( (io.req.valid && (sel1 || sel2)), "HFSU Invalid PAL/PAH instrucion.")
       out0 := Mux(sel1, io.req.bits.in1(16,0),
               Mux(sel2, io.req.bits.in3(16,0),
                   UInt(0)))
