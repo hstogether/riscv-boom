@@ -609,6 +609,12 @@ class Rob(width: Int,
             debug_entry(w + i*width).exception := rob_exception(UInt(i))
          }
       }
+      if(DEBUG_PRINTF_INS){
+        when(will_commit(w)) {
+          printf("[DASM(%x)](%d)\n",
+                 rob_uop(com_idx).inst,rob_uop(com_idx).uopc)
+        }
+      }
 
    } //for (w <- 0 until width)
 
